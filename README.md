@@ -1,15 +1,15 @@
-#Avito
+# Avito
 
-##Install
+## Install
 
     apt-get install -y tesseract-ocr
     apt-get install -y asterisk
     
 Install npm,  nodejs, php, mongo
 
-###Setup asterisk config
+### Setup asterisk config
 
-####Add trunk
+#### Add trunk
 
 Add to `/etc/asterisk/users.conf`
 
