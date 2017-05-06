@@ -1,12 +1,12 @@
-var exec = require('child_process').exec;
-var fs = require('fs');
+const exec = require('child_process').exec;
+const fs = require('fs');
 
-var id = process.argv[2];
-var data = require('fs').readFileSync('data/one/' + id);
+const id = process.argv[2];
+let data = require('fs').readFileSync('data/one/' + id);
 data = JSON.parse(data);
 
-var saveBase64 = function(id, base64image, callback) {
-  var path = 'data/image/' + id + '.png';
+const saveBase64 = function(id, base64image, callback) {
+  let path = 'data/image/' + id + '.png';
   fs.writeFileSync(path, new Buffer(base64image, 'base64'));
   return path;
 };
@@ -14,18 +14,18 @@ var saveBase64 = function(id, base64image, callback) {
 // ...
 
 require('./lib/db')(function(models) {
-  var path = saveBase64(id, data.image);
+  const path = saveBase64(id, data.image);
   exec('tesseract ' + path + ' data/phone/' + id, function(err, err2, output) {
     if (err) throw new Error(err);
     if (err2) throw new Error(err2);
-    var phone = fs.readFileSync('data/phone/' + id + '.txt'). //
+    const phone = fs.readFileSync('data/phone/' + id + '.txt'). //
     toString().trim().replace(/[\s—\-]*/g, '');
-    models.one.create({
-      id: id,
+    models.one.update({id: id}, {$set: {
       phone: phone
+    }}, function() {
+      console.log('Updated phone ' + phone + ' for ' + id);
+      process.exit(0);
     });
-    console.log('Stored ' + phone);
-    process.exit(0);
   });
 });
 

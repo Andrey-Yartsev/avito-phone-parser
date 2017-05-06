@@ -1,39 +1,63 @@
-var exec = require('child_process').exec;
+// if (!process.argv[2]) {
+//   console.log('Syntax: casperjs addParseOne.js avito/one/page');
+//   return;
+// }
+//
+// const path = process.argv[2];
+// const spawn = require('child_process').spawn;
 
-// Promise exit
+const exec = require('child_process').exec;
+const MAX_PROCESSES = 5;
 
-require('./lib/db')(function(models) {
-  models.link.find({
+const getProccessN = function(callback) {
+  exec('ps aux | grep parseOne\.js', function(error, stdout, stderr) {
+    if (stderr) throw new Error(stderr);
+    if (error) throw new Error(error);
+    let lines = stdout.trim().split("\n");
+    lines = lines.filter(function(v) {
+      return v.match('casper');
+    });
+    callback(lines.length);
+  });
+};
+
+const addParser = function(models, callback) {
+  models.one.find({
     parsing: false,
     parseDt: null
   }, function(err, links) {
-    for (var i = 0; i < links.length; i++) {
-      (function() {
-        var link = links[i];
-        // total: parsing: parsed: parsedPerMinute:
-        console.log('Running ' + links[i].url);
-        models.link.update({ _id: link._id }, { $set: {
-          parsing: true
-        }}, function() {
-          exec('casperjs parseOne.js ' + link.url, function(error, stdout, stderr) {
-            models.link.update({ _id: link._id }, { $set: {
-              parsing: false,
-              parseDt: new Date()
-            }}, function() {
-              console.log('Link ' + link.url + ' parsed');
-            });
-          });
-          // run parseOne
+    if (!links.length) return;
+    const link = links[0];
+    // total: parsing: parsed: parsedPerMinute:
+    console.log('Start parsing ' + link.id + ' ' + link.url);
+    models.one.update({_id: link._id}, {
+      $set: {
+        parsing: true
+      }
+    }, function() {
+      exec('casperjs parseOne.js ' + link.id + ' ' + link.url, function(error, stdout, stderr) {
+        models.one.update({_id: link._id}, {
+          $set: {
+            parsing: false,
+            parseDt: new Date()
+          }
+        }, function() {
+          console.log('Link ' + link.url + ' parsed');
+          if (callback) callback(link);
         });
-      })(i);
-    }
-  }).limit(5) // max process
+      });
+    });
+  }).limit(1); // max process
+};
+
+require('./lib/db')(function(models) {
+  setInterval(function() {
+    // adds parseOne if its max process number less MAX_PROCESSES
+    getProccessN(function(n) {
+      console.log('.');
+      if (n < MAX_PROCESSES) {
+        addParser(models);
+      }
+    });
+  }, 1000);
 });
-
-
-//
-
-// model.url.create({ url: 'small' }, function (err, url) {
-//   if (err) return handleError(err);
-//   console.log(url);
-// });

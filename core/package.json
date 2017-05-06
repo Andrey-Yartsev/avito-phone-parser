@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/majexa/avito-phone-parser#readme",
   "dependencies": {
-    "mongoose": "^4.9.7"
+    "mongoose": "^4.9.7",
+    "socket.io": "^1.7.3"
   }
 }

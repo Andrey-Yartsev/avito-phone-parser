@@ -5,23 +5,12 @@ var casper = require('casper').create({
   // logLevel: "debug"
 });
 
-var hashCode = function(s) {
-  var hash = 0, i, chr;
-  if (s.length === 0) return 'id' + hash;
-  for (i = 0; i < s.length; i++) {
-    chr = s.charCodeAt(i);
-    hash = ((hash << 5) - hash) + chr;
-    hash |= 0; // Convert to 32bit integer
-  }
-  return 'id' + hash;
-};
-
-
 if (!casper.cli.args.length) {
-  console.log('Syntax: casperjs parseOne.js some/path');
+  console.log('Syntax: casperjs parseOne.js ID avito/item/link');
   casper.exit(1);
 }
-var page = casper.cli.args[0];
+var id = casper.cli.args[0];
+var page = casper.cli.args[1];
 if (page.charAt(0) === '/') {
   page = page.substr(1);
 }
@@ -39,14 +28,15 @@ casper.start('https://www.avito.ru/' + page, function() {
     var data = JSON.stringify({
       image: base64Data
     });
-    var id = hashCode(data);
     require('fs').write('data/one/' + id, data);
-    require('child_process').exec('node', ['oneParsed.js', id], function(error, stdout, stderr) {
-      console.log('done');
+    console.log('Running', 'node', 'oneParsed.js', id);
+    require('child_process').execFile('node', ['oneParsed.js', id], null, function(error, stdout, stderr) {
+      console.log(stdout);
+      casper.exit(0);
     });
   });
   casper.then(function() {
-    casper.wait(1000);
+    casper.wait(5000);
   });
 });
 

@@ -1,9 +1,11 @@
-# Avito
+# Avito Parse-N-Call Serivice
+
+Parses phones from avito and call to them
 
 ## Install
 
-    apt-get install -y tesseract-ocr
-    apt-get install -y asterisk
+    sudo apt-get install -y tesseract-ocr
+    sudo apt-get install -y asterisk
     
 Install npm,  nodejs, php, mongo
 
@@ -51,4 +53,10 @@ Reload asterisk `/etc/init.d/asterisk reload`
 
 ### Clone project
 
-    git clone https://github.com/majexa/avito
+    git clone https://github.com/majexa/avito /usr/src/avito
+
+### Install `pm2`
+
+    sudo npm install -g pm2
+
+### Run daemon

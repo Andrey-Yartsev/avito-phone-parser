@@ -16,10 +16,14 @@ casper.start('https://www.avito.ru/' + base, function() {
   casper.then(function() {
     var links = casper.evaluate(getLinks);
     require('fs').write('data/links/' + id + '.json', JSON.stringify(links));
-    require('child_process').exec('node', ['linksParsed.js', id], function(error, stdout, stderr) {
+    require('child_process').execFile('node', ['linksParsed.js', id], function(error, stdout, stderr) {
+      console.log([error, stdout, stderr]);
       console.log('done ' + id);
+      casper.exit(0);
     });
-
+  });
+  casper.then(function() {
+    casper.wait(5000);
   });
 });
 
