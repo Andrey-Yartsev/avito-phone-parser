@@ -127,7 +127,7 @@ module.exports = [{
       //reply();
       exec('sudo php /usr/src/avito/asterisk/call.php ' + r.id + ' ' + r.phone, function(err, err2, output) {
         console.log(err, err2, output);
-        reply('calling');
+        reply.redirect('/create-item');
       });
     });
   }

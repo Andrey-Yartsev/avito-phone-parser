@@ -9,6 +9,10 @@ Parses phones from avito and call to them
     
 Install npm,  nodejs, php, mongo
 
+    curl -sL https://deb.nodesource.com/setup_7.x | sudo -E bash -
+
+    sudo apt-get install -y nodejs
+
 ### Setup asterisk config
 
 #### Add trunk
