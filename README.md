@@ -48,3 +48,7 @@ require('/usr/src/avito/asterisk/answer.php');
 Set permission `chmod 755 /usr/share/asterisk/agi-bin/answer.php`
 
 Reload asterisk `/etc/init.d/asterisk reload`
+
+### Clone project
+
+    git clone https://github.com/majexa/avito
