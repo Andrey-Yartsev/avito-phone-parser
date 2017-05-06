@@ -1,0 +1,6 @@
+data/image/*
+data/one/*
+data/links/*
+data/phone/*
+!.dummy
+node_modules
