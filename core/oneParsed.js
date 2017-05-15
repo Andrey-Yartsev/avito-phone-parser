@@ -1,5 +1,6 @@
 const exec = require('child_process').exec;
 const fs = require('fs');
+const wsClient = require("socket.io-client");
 
 const id = process.argv[2];
 let data = require('fs').readFileSync('data/one/' + id);
@@ -23,6 +24,10 @@ require('./lib/db')(function(models) {
     models.one.update({id: id}, {$set: {
       phone: phone
     }}, function() {
+      const connection  = wsClient.connect("http://localhost:3050/");
+      connection.emit('changed');
+      console.log('emited');
+      // ...
       console.log('Updated phone ' + phone + ' for ' + id);
       process.exit(0);
     });

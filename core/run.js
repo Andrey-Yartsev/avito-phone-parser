@@ -26,7 +26,10 @@ const addParser = function(models, callback) {
     parsing: false,
     parseDt: null
   }, function(err, links) {
-    if (!links.length) return;
+    if (!links.length) {
+      console.log('nothing to parse');
+      return;
+    }
     const link = links[0];
     // total: parsing: parsed: parsedPerMinute:
     console.log('Start parsing ' + link.id + ' ' + link.url);
@@ -54,7 +57,6 @@ require('./lib/db')(function(models) {
   setInterval(function() {
     // adds parseOne if its max process number less MAX_PROCESSES
     getProccessN(function(n) {
-      console.log('.');
       if (n < MAX_PROCESSES) {
         addParser(models);
       }

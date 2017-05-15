@@ -1,21 +1,40 @@
 const exec = require('child_process').exec;
+const spawn = require('child_process').spawn;
 
 const menu = `
+<html>
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.1/socket.io.slim.js"></script>
+<script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+</head>
+<body>
+
+<script>
+	var socket = io.connect('http://localhost:3050');
+	socket.on('changed', function () {
+		console.log('changed');
+    $('#table').load(window.location.pathname + ' #table table', function() {});		
+	});
+</script>
+
 <p>
 <a href="/">Все</a> |
 <a href="/items-parsing">Парсятся</a> |
 <a href="/items-with-phone">С телефоном</a> |
 <a href="/create-item">Добавить телефон</a> |
+<a href="/links">Выдачи</a> |
 </p>
+
 `;
 
 const table = function(r, call) {
   let html = `
-<script>
-setTimeout("location.reload(true);", 5000);
-</script>
       `;
   html += `
+<div id="table">
 <table border="1">
 <tr>
   <th>ID</th>
@@ -81,9 +100,16 @@ module.exports = [{
   method: 'GET',
   path: '/items-parsing',
   handler: function(request, reply) {
-    renderItems(request, reply, {
-      parsing: true
-    }, '<p><a href="/reset-parsing">Сбросить</a></p>');
+    exec('pm2 status run', function(error, output) {
+      renderItems(request, reply, {
+        parsing: true
+      }, `<p>
+<a href="/reset-parsing">Сбросить</a>
+<a href="/start-parsing">Запустить</a>
+<a href="/stop-parsing">Остановить</a>
+</p><pre>` + output + `</pre>`);
+
+    });
   }
 }, {
   method: 'GET',
@@ -92,10 +118,38 @@ module.exports = [{
     request.models.one.updateMany({
       parsing: true
     }, {
-      $set: {parsing: false}
+      $set: {
+        parsing: false
+      }
     }).exec(function() {
-      reply.redirect('/items-parsing');
+      request.models.one.updateMany({
+        parseDt: {$ne: null}
+      }, {
+        $set: {
+          parseDt: null
+        }
+      }).exec(function() {
+        reply.redirect('/items-parsing');
+      });
     });
+  }
+}, {
+  method: 'GET',
+  path: '/start-parsing',
+  handler: function(request, reply) {
+    spawn('pm2', ['start', 'run.js'], {
+      detached: true
+    });
+    reply.redirect('/items-parsing');
+  }
+}, {
+  method: 'GET',
+  path: '/stop-parsing',
+  handler: function(request, reply) {
+    spawn('pm2', ['stop', 'run'], {
+      detached: true
+    });
+    reply.redirect('/items-parsing');
   }
 }, {
   method: 'GET',
@@ -104,6 +158,12 @@ module.exports = [{
     renderItems(request, reply, {
       test: true
     }, createForm(), true);
+  }
+}, {
+  method: 'GET',
+  path: '/links',
+  handler: function(request, reply) {
+    reply(menu + 'asd');
   }
 }, {
   method: 'POST',
@@ -125,7 +185,7 @@ module.exports = [{
       id: request.params.id
     }).exec(function(err, r) {
       //reply();
-      exec('sudo php /usr/src/avito/asterisk/call.php ' + r.id + ' ' + r.phone, function(err, err2, output) {
+      exec('sudo php /usr/src/collector/asterisk/call.php ' + r.id + ' ' + r.phone, function(err, err2, output) {
         console.log(err, err2, output);
         reply.redirect('/create-item');
       });

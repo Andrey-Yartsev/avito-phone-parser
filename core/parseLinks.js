@@ -1,4 +1,8 @@
-var casper = require('casper').create();
+//var casper = require('casper').create();
+var casper = require('casper').create({
+  verbose: true,
+  logLevel: "debug"
+});
 var hashCode = require('./lib/hashCode');
 
 function getLinks() {
@@ -14,6 +18,7 @@ var id = hashCode(base);
 
 casper.start('https://www.avito.ru/' + base, function() {
   casper.then(function() {
+    console.log('getLinks');
     var links = casper.evaluate(getLinks);
     require('fs').write('data/links/' + id + '.json', JSON.stringify(links));
     require('child_process').execFile('node', ['linksParsed.js', id], function(error, stdout, stderr) {

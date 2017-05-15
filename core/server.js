@@ -20,6 +20,6 @@ require('./lib/db')(function(models) {
   cpServer.decorate('request', 'models', models);
   server.start(function (err) {
     if (err) throw err;
-    console.log('Server running on 8050');
+    console.log('Server running on 8050, 3050');
   });
 });
