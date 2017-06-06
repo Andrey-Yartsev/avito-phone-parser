@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
 //const objectId = mongoose.Schema.Types.ObjectId;
 
-module.exports = mongoose.model('One', mongoose.Schema({
+module.exports = mongoose.model('Item', mongoose.Schema({
+  sourceHash: {
+    type: String
+  },
   url: {
     type: String
   },
@@ -13,20 +16,27 @@ module.exports = mongoose.model('One', mongoose.Schema({
     type: Boolean,
     default: false
   },
-  id: {
-    type: String,
-    required: true
-  },
   phone: {
     type: String
   },
   accepted: {
-    type: Boolean,
+    type: Number,
     default: null
   },
   lastCallDt: {
     type: Date,
     default: null
+  },
+  resultDt: {
+    type: Date,
+    default: null
+  },
+  callStatus: {
+    type: String
+  },
+  retries: {
+    type: Number,
+    default: 0
   },
   test: {
     type: Boolean,

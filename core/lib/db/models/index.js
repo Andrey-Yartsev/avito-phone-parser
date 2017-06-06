@@ -1,4 +1,4 @@
 module.exports = {
-  one: require('./one.js'),
+  item: require('./item.js'),
   source: require('./source.js'),
 };

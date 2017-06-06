@@ -4,3 +4,5 @@ data/links/*
 data/phone/*
 !.dummy
 node_modules
+.env
+info

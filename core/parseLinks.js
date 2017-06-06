@@ -1,35 +1,74 @@
-//var casper = require('casper').create();
-var casper = require('casper').create({
-  verbose: true,
-  logLevel: "debug"
-});
-var hashCode = require('./lib/hashCode');
+const request = require("request");
+const cheerio = require('cheerio');
+//const hashCode = require('./lib/hashCode');
+const saveMany = require('./lib/db/saveMany');
 
-function getLinks() {
-  var links = document.querySelectorAll('.catalog-list .item-description-title-link');
-  return Array.prototype.map.call(links, function(e) {
-    return e.getAttribute('href')
+//let pageN = 0;
+let allLinks = [];
+const base = 'https://www.avito.ru/';
+const wsClient = require("socket.io-client");
+const wsConnection = wsClient.connect("http://localhost:3050/");
+
+const parse = (link, pageN, onComplete) => {
+  const sep = link.match(/\?/) ? '&' : '?';
+  const uri = base + link + sep + 'p=' + pageN;
+  console.log('Requesting ' + uri);
+  request({
+    uri,
+  }, function (error, response, body) {
+    console.log('Response');
+    if (response.statusCode !== 200) {
+      console.log('Parsing complete at ' + (pageN - 1) + ' page');
+      onComplete();
+      return;
+    }
+    const $ = cheerio.load(body);
+    const links = $('body').find('.catalog-list .item-description-title-link');
+    for (let i = 0; i < links.length; i++) {
+      allLinks.push(links[i].attribs.href);
+    }
+    console.log('Parsed ' + pageN + ' page. Links count: ' + allLinks.length);
+    parse(link, pageN + 1, onComplete);
   });
+};
+
+if (!process.argv[2]) {
+  console.log('Syntax: node parseLinks.js avito/items/link');
 }
 
-var base = 'nizhniy_novgorod/transport';
-//var pageNumber = 1;
-var id = hashCode(base);
-
-casper.start('https://www.avito.ru/' + base, function() {
-  casper.then(function() {
-    console.log('getLinks');
-    var links = casper.evaluate(getLinks);
-    require('fs').write('data/links/' + id + '.json', JSON.stringify(links));
-    require('child_process').execFile('node', ['linksParsed.js', id], function(error, stdout, stderr) {
-      console.log([error, stdout, stderr]);
-      console.log('done ' + id);
-      casper.exit(0);
+const hash = process.argv[2];
+require('./lib/db')(function (models) {
+  models.source.findOne({hash}).exec((err, source) => {
+    if (!source) {
+      throw new Error(`Source ${hash} not found`);
+    }
+    models.source.updateOne({hash}, {$set: {updating: true}}).exec((err, r) => {
+      wsConnection.emit('changed', 'source');
+      parse(source.link, 0, () => {
+        let items = [];
+        for (let link of allLinks) {
+          items.push({
+            sourceHash: hash,
+            url: link
+          });
+        }
+        models.item.remove({
+          sourceHash: hash
+        }).exec(() => {
+          saveMany(models.item, items, () => {
+            models.source.updateOne({hash}, {$set: {updating: false}}).exec((err, r) => {
+              console.log('Links saved for ' + hash + ' source');
+              wsConnection.emit('changed', 'source');
+              process.exit(0);
+            });
+          });
+        });
+      });
     });
   });
-  casper.then(function() {
-    casper.wait(5000);
-  });
 });
-
-casper.run();
+//
+//
+// // const parseNext = () => {
+// //     pageN++;
+// // };

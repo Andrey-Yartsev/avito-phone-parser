@@ -3,12 +3,27 @@
 error_reporting(E_ALL & ~E_NOTICE);
 require('phpagi.php');
 
+$root = dirname(__DIR__);
+
 $agi = new AGI();
 $agi->answer();
 $id = $agi->getVar('id');
+
+$agi->conlog("cd $root/core && node callResult.js $id pickup");
+$r = `cd $root/core && node callResult.js $id pickup`;
+$agi->conlog($r);
+
 $r = $agi->getDigit(__DIR__.'/sound/hello');
-$keys = $r['result'];
-$accepted = $keys === '1' ? '1' : '0';
-$root = dirname(__DIR__);
-`node $root/core/callResult.js $id $accepted`;
+
+if (isset($r['data']) and $r['data'] === 'timeout') {
+    $accepted = 'timeout';
+} else {
+    $keys = $r['result'];
+    $accepted = $keys === '1' ? '1' : '0';
+}
+
+//$agi->conlog(':::::::::::::::::::'.$r['result'].'---'.gettype($r['result']));
+
+$r = `cd $root/core && node callResult.js $id answered $accepted`;
+$agi->conlog($r);
 $agi->hangup();

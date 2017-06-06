@@ -1,7 +1,20 @@
 const mongoose = require('mongoose');
 
 module.exports = mongoose.model('Source', mongoose.Schema({
-  url: {
-    type: String
+  title: {
+    type: String,
+    required: true
+  },
+  link: {
+    type: String,
+    required: true
+  },
+  hash: {
+    type: String,
+    required: true
+  },
+  updating: {
+    type: Boolean,
+    default: false
   }
 }));

@@ -22,7 +22,28 @@ Parses phones from avito and call to them
 #### Node.js
 
     curl -sL https://deb.nodesource.com/setup_7.x | sudo -E bash -
-    sudo apt-get install -y nodejs
+    apt-get install -y nodejs
+
+#### Java, Selenium, Firefox
+
+Java
+
+    apt-get update
+    apt-get install -y default-jre
+    
+Selenium
+
+    mkdir /usr/lib/selenium
+    mkdir /var/log/selenium
+    wget -O /usr/lib/selenium/selenium-server-standalone.jar https://goo.gl/s4o9Vx
+    
+Firefox
+
+    apt-get install -y firefox
+    
+Copy `./selenium` file to `/etc/init.d/selenium`
+    
+    chmod +x /etc/init.d/selenium
 
 #### MongoDB
 
@@ -80,6 +101,9 @@ Add to `/etc/asterisk/extensions.ael`
     context common {
       s => {
         AGI(answer.php);
+      };
+      h => {
+        AGI(hangup.php);
       };
     }
 
