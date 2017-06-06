@@ -6,11 +6,11 @@ Parses phones from avito and call to them
 
 ### Soft
 
-#### Tesseract, Asterisk, Git
+#### Git, Asterisk, Tesseract
 
-    apt-get install -y tesseract-ocr
-    apt-get install -y asterisk
     apt-get install -y git-core
+    apt-get install -y asterisk
+    apt-get install -y tesseract-ocr
     
 #### PHP
 
@@ -116,6 +116,15 @@ require('/usr/src/collector/asterisk/answer.php');
 ```
 Set permission `chmod 755 /usr/share/asterisk/agi-bin/answer.php`
 
+Create file `/usr/share/asterisk/agi-bin/hangup.php` with such contents:
+
+```php
+#!/usr/bin/php -q
+<?php
+require('/usr/src/collector/asterisk/hangup.php');
+```
+Set permission `chmod 755 /usr/share/asterisk/agi-bin/hangup.php`
+
 Reload asterisk `/etc/init.d/asterisk reload`
 
 ### Clone project and build project
@@ -131,5 +140,4 @@ Reload asterisk `/etc/init.d/asterisk reload`
 
     cd /usr/src/collector/core
     pm2 start server.js
-
-    
+   
