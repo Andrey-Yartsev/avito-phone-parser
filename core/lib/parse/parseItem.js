@@ -1,7 +1,6 @@
 const exec = require('child_process').exec;
 
 module.exports = (wsConnection, models, item, callback) => {
-
   const finish = (item, callback) => {
     models.item.updateOne({_id: item._id}, {
       $set: {
@@ -12,12 +11,8 @@ module.exports = (wsConnection, models, item, callback) => {
       callback(item);
     });
   };
-
-
-
   let attempt = 0;
   const maxAttempts = 3;
-
   const parseItem = () => {
     if (attempt) console.log('Attempt ' + (attempt + 1));
     //console.log('pkill firefox');

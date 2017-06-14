@@ -4,6 +4,7 @@ const fs = require('fs');
 const dataFolder = './data/process/parseItem';
 
 module.exports = (sourceHash) => {
+  let workers = 0;
   const getN = () => {
     let n = 0;
     fs.readdirSync(dataFolder).forEach(file => {
@@ -17,11 +18,14 @@ module.exports = (sourceHash) => {
     });
   };
   return {
+    init: () => {
+      fs.writeFileSync(dataFolder + '/' + sourceHash, process.pid);
+    },
+
     start: () => {
       const parse = spawn('node', ['parse.js', sourceHash], {
         detached: true
       });
-
     },
     stop: () => {
       cleanup();

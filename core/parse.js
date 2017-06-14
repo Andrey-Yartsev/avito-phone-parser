@@ -35,7 +35,7 @@ require('./lib/db')(function (models) {
     });
   } else {
     const parseProcess = require('./lib/parse/process')(sourceHash);
-    parseProcess.cleanup();
+    parseProcess.init();
     let processN = 0;
     setInterval(function () {
       //console.log('running ' + parseProcess.getN());
