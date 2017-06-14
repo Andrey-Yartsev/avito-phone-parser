@@ -16,5 +16,9 @@ module.exports = mongoose.model('Source', mongoose.Schema({
   updating: {
     type: Boolean,
     default: false
+  },
+  lastLinksPage: {
+    type: Number,
+    default: 0
   }
 }));

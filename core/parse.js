@@ -85,10 +85,10 @@ getProccessN((n) => {
     process.exit(1);
   }
   require('./lib/db')(function (models) {
-    setInterval(function () {
+    //setInterval(function () {
       if (parsersRunning < MAX_PROCESSES) {
         addParser(models);
       }
-    });
-  }, 3000);
+    //}, 3000);
+  });
 });

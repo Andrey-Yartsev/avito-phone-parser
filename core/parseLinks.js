@@ -3,66 +3,95 @@ const cheerio = require('cheerio');
 //const hashCode = require('./lib/hashCode');
 const saveMany = require('./lib/db/saveMany');
 
-//let pageN = 0;
-let allLinks = [];
 const base = 'https://www.avito.ru/';
 const wsClient = require("socket.io-client");
 const wsConnection = wsClient.connect("http://localhost:3050/");
 
-const parse = (link, pageN, onComplete) => {
+const parsePage = (link, pageN, onLinksExists, onError, onEnd) => {
+  let links = [];
   const sep = link.match(/\?/) ? '&' : '?';
   const uri = base + link + sep + 'p=' + pageN;
   console.log('Requesting ' + uri);
   request({
     uri,
   }, function (error, response, body) {
-    console.log('Response');
+    console.log('Response code ' + response.statusCode);
     if (response.statusCode !== 200) {
       console.log('Parsing complete at ' + (pageN - 1) + ' page');
-      onComplete();
+      onEnd();
+      return;
+    }
+    if (body.match(/IP временно ограничен/)) {
+      onError('Avito ban detected');
       return;
     }
     const $ = cheerio.load(body);
-    const links = $('body').find('.catalog-list .item-description-title-link');
-    for (let i = 0; i < links.length; i++) {
-      allLinks.push(links[i].attribs.href);
+    const linkElements = $('body').find('.catalog-list .item-description-title-link');
+    for (let i = 0; i < linkElements.length; i++) {
+      links.push(linkElements[i].attribs.href);
     }
-    console.log('Parsed ' + pageN + ' page. Links count: ' + allLinks.length);
-    parse(link, pageN + 1, onComplete);
+    console.log('Parsed ' + pageN + ' page. Links count: ' + links.length);
+    onLinksExists(links, pageN, () => {
+      setTimeout(() => {
+        parsePage(link, pageN + 1, onLinksExists, onError, onEnd);
+      }, Math.round(Math.random() * 10000) + 2000);
+    });
   });
 };
+
 
 if (!process.argv[2]) {
   console.log('Syntax: node parseLinks.js avito/items/link');
 }
 
+const buildItems = (links) => {
+  let items = [];
+  for (let link of links) {
+    items.push({
+      sourceHash: hash,
+      url: link
+    });
+  }
+  return items;
+};
+
 const hash = process.argv[2];
+
 require('./lib/db')(function (models) {
   models.source.findOne({hash}).exec((err, source) => {
     if (!source) {
       throw new Error(`Source ${hash} not found`);
     }
-    models.source.updateOne({hash}, {$set: {updating: true}}).exec((err, r) => {
-      wsConnection.emit('changed', 'source');
-      parse(source.link, 0, () => {
-        let items = [];
-        for (let link of allLinks) {
-          items.push({
-            sourceHash: hash,
-            url: link
-          });
-        }
-        models.item.remove({
-          sourceHash: hash
-        }).exec(() => {
-          saveMany(models.item, items, () => {
-            models.source.updateOne({hash}, {$set: {updating: false}}).exec((err, r) => {
-              console.log('Links saved for ' + hash + ' source');
-              wsConnection.emit('changed', 'source');
-              process.exit(0);
-            });
-          });
+    let linksPage = source.lastLinksPage === 0 ? 0 : source.lastLinksPage + 1;
+    const onLinksExists = (links, pageN, callback) => {
+      models.source.updateOne({hash}, {$set: {lastLinksPage: pageN}}).exec(() => {
+        saveMany(models.item, buildItems(links), () => {
+          console.log(`Links saved for ${hash} source (page: ${pageN})`);
+          wsConnection.emit('changed', 'source');
+          callback();
         });
+      });
+    };
+    const onError = (error) => {
+      console.error(error);
+      process.exit(1);
+    };
+    const onEnd = () => {
+      models.source.updateOne({hash}, {$set: {
+        updating: false,
+        lastLinksPage: 0
+      }}).exec(() => {
+        wsConnection.emit('changed', 'source');
+        console.log(`Successfully ended on page ${linksPage}`);
+        process.exit(0);
+      });
+    };
+    models.source.updateOne({hash}, {$set: {updating: true}}).exec(() => {
+      wsConnection.emit('changed', 'source');
+      models.item.remove({
+        sourceHash: hash
+      }).exec(() => {
+        parsePage(source.link, linksPage, onLinksExists, onError, onEnd);
       });
     });
   });

@@ -5,8 +5,11 @@ const webdriverio = require('./build');
 const fs = require('fs');
 
 const client = webdriverio.remote({
-  desiredCapabilities: {browserName: 'firefox'},
-  logLevel: 'none'
+  desiredCapabilities: {
+    browser: 'chrome',
+    browserName: 'chrome'
+  },
+  logLevel: 'verbose'
 }).init();
 
 const writeImage = (base64Data) => {
@@ -20,6 +23,7 @@ const writeImage = (base64Data) => {
 
 const parseItem = () => {
   const tooltipClassName = 'seller-info-avatar-tooltip';
+  console.log('!!!');
   return new Promise(function (resolve, reject) {
     client
       .url('https://www.avito.ru/' + process.env.URI)

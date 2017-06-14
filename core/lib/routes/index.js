@@ -19,6 +19,20 @@ const menu = `
   src="https://code.jquery.com/jquery-3.2.1.min.js"
   integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
   crossorigin="anonymous"></script>
+  <style>
+  .pagination {
+  margin-bottom: 10px;
+  }
+  .pagination a, .pagination b {
+  display: inline-block;
+  padding: 5px 20px;
+  border: 1px solid #ccc;
+  margin-right: 10px;
+  }
+  .pagination b {
+  border: 1px solid #555;
+  }
+</style>
 </head>
 <body>
 
@@ -35,9 +49,19 @@ const menu = `
 `;
 
 const itemsMenu = (sourceHash) => {
+  const parseProcess = require('../parse/process');
+  const inProgress = parseProcess(sourceHash).inProgress();
+  let parseBtn;
+  if (inProgress) {
+    parseBtn = `<a href="/stop-item-parsing/${sourceHash}">Стоп</a>`;
+  } else {
+    parseBtn = `<a href="/start-item-parsing/${sourceHash}">Старт</a>`;
+  }
+
   return `
 <p>
   <a href="/items/${sourceHash}">Все</a> | 
+  ${parseBtn} |
   <a href="/items/${sourceHash}/parsing">Парсятся</a> | 
   <a href="/items/${sourceHash}/with-phone">С телефоном</a> | 
   <a href="/items/${sourceHash}/called">Звонки</a> | 
@@ -61,7 +85,7 @@ socket.on('changed', function (what) {
   $('#table').load(window.location.pathname + ' #table div', function() {});		
 });
 </script>
-Всего: ${r.length}
+
 <div id="table">
 <div>
 <table border="1">
@@ -224,7 +248,7 @@ socket.on('changed', function (what) {
       for (let v of r) {
         let count = counts[v.hash] || 0;
         let links = count ? `<a href="/items/${v.hash}"><b>Ссылки</b> (${count})</a> | <a href="/items-with-phone/${v.hash}">Ссылки с телефоном</a> | ` : '';
-        let updating = v.updating ? `<i>обновляется (${count})</i>` : '';
+        let updating = v.updating ? `<i>обновляется</i>` : '';
         html += `<li>
 <b>${v.title}</b> (${v.hash}) <a href="https://www.avito.ru/${v.link}" target="_blank">ссылка на выдачу avito</a>
 <p>
@@ -252,15 +276,45 @@ const renderItems = function (request, reply, sourceHash, filter, prependHtml, c
     prependHtml += title;
     prependHtml += itemsMenu(sourceHash);
     filter.sourceHash = sourceHash;
-    request.models.item.find(filter).exec(function (err, r) {
-      reply(menu + prependHtml + table(r, true));
+
+    request.models.item.count(filter, (err, totalRecordsCount) => {
+
+      // ------------
+      let Pagination = require('ngn-pagination');
+      let pagination = new Pagination({
+        basePath: '/items/' + sourceHash,
+        maxPages: 20
+      });
+
+      let currentPageN = 1; // first page
+      if (request.params.pn) {
+        currentPageN = request.params.pn;
+      }
+      let paginationData = pagination.data(currentPageN, totalRecordsCount);
+      // ------------
+
+      request.models.item.find(filter).//
+      skip(pagination.options.n * (paginationData.page - 1)).//
+      limit(pagination.options.n).//
+      exec(function (err, r) {
+        reply(menu + prependHtml + '<span>Всего: ' + totalRecordsCount + '</span><div class="pagination">' + paginationData.pNums + '</div>' + table(r, true));
+      });
     });
+
   });
 };
 
 module.exports = [{
   method: 'GET',
   path: '/items/{sourceHash}',
+  handler: function (request, reply) {
+    renderItems(request, reply, request.params.sourceHash, {
+      sourceHash: request.params.sourceHash
+    });
+  }
+}, {
+  method: 'GET',
+  path: '/items/{sourceHash}/pg{pn}',
   handler: function (request, reply) {
     renderItems(request, reply, request.params.sourceHash, {
       sourceHash: request.params.sourceHash
@@ -306,7 +360,7 @@ module.exports = [{
   handler: function (request, reply) {
     renderItems(request, reply, request.params.sourceHash, {
       parsing: true
-    }, itemsMenu(request.params.sourceHash));
+    });
   }
 }, {
   method: 'GET',
@@ -347,21 +401,19 @@ module.exports = [{
   }
 }, {
   method: 'GET',
-  path: '/start-parsing',
+  path: '/start-item-parsing/{sourceHash}',
   handler: function (request, reply) {
-    spawn('pm2', ['start', 'run.js'], {
-      detached: true
-    });
-    reply.redirect('/items-parsing');
+    const parseProcess = require('../parse/process')(request.params.sourceHash);
+    parseProcess.start();
+    reply.redirect('/items/' + request.params.sourceHash);
   }
 }, {
   method: 'GET',
-  path: '/stop-parsing',
+  path: '/stop-item-parsing/{sourceHash}',
   handler: function (request, reply) {
-    spawn('pm2', ['stop', 'run'], {
-      detached: true
-    });
-    reply.redirect('/items-parsing');
+    const parseProcess = require('../parse/process')(request.params.sourceHash);
+    parseProcess.stop();
+    reply.redirect('/items/' + request.params.sourceHash);
   }
 }, {
   method: 'GET',

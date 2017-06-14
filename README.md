@@ -26,17 +26,78 @@ Parses phones from avito and call to them
 
 #### Java, Selenium, Firefox
 
-Java
+##### Java
 
     apt-get update
     apt-get install -y default-jre
     
-Selenium
+##### Selenium
 
     mkdir /usr/lib/selenium
     mkdir /var/log/selenium
     wget -O /usr/lib/selenium/selenium-server-standalone.jar https://goo.gl/s4o9Vx
     
+Add `/etc/init.d/selenium` script:
+
+```bash
+#!/bin/bash
+
+case "${1:-''}" in
+    'start')
+        if test -f /tmp/selenium.pid
+        then
+            echo "Selenium is already running."
+        else
+            export DISPLAY=localhost:99.0
+            java -jar /usr/lib/selenium/selenium-server-standalone.jar -port 4444 > /var/log/selenium/output.log 2> /var/log/selenium/error.log & echo $! > /tmp/selenium.pid
+            echo "Starting Selenium..."
+
+            error=$?
+            if test $error -gt 0
+            then
+                echo "${bon}Error $error! Couldn't start Selenium!${boff}"
+            fi
+        fi
+    ;;
+    'stop')
+        if test -f /tmp/selenium.pid
+        then
+            echo "Stopping Selenium..."
+            PID=`cat /tmp/selenium.pid`
+            kill -3 $PID
+            if kill -9 $PID ;
+                then
+                    sleep 2
+                    test -f /tmp/selenium.pid && rm -f /tmp/selenium.pid
+                else
+                    echo "Selenium could not be stopped..."
+                fi
+        else
+            echo "Selenium is not running."
+        fi
+        ;;
+    'restart')
+        if test -f /tmp/selenium.pid
+        then
+            kill -HUP `cat /tmp/selenium.pid`
+            test -f /tmp/selenium.pid && rm -f /tmp/selenium.pid
+            sleep 1
+            export DISPLAY=localhost:99.0
+            java -jar -Dwebdriver.gecko.driver=/usr/lib/selenium/geckodriver /usr/lib/selenium/selenium-server-standalone.jar > /var/log/selenium/output.log 2> /var/log/selenium/error.log & echo $! > /tmp/selenium.pid
+            echo "Reload Selenium..."
+        else
+            echo "Selenium isn't running..."
+        fi
+        ;;
+    *)      # no parameter specified
+        echo "Usage: $SELF start|stop|restart"
+        exit 1
+    ;;
+esac
+```
+
+Add `/etc/init.d/selenium start` to `/etc/init.d/rc.local`
+
 Firefox
 
     apt-get install -y firefox
@@ -131,6 +192,12 @@ Reload asterisk `/etc/init.d/asterisk reload`
 
     git clone https://github.com/majexa/collector /usr/src/collector
     cd /usr/src/collector/core && npm install
+    
+Create file `.env` with such contents:
+
+    SERVER_HOST = IP_OF_THE_SERVER
+    SMSC_LOGIN = login
+    SMSC_PASSWORD = password
 
 ### Install pm2
 
