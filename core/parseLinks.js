@@ -62,36 +62,38 @@ require('./lib/db')(function (models) {
     if (!source) {
       throw new Error(`Source ${hash} not found`);
     }
-    let linksPage = source.lastLinksPage === 0 ? 0 : source.lastLinksPage + 1;
-    const onLinksExists = (links, pageN, callback) => {
-      models.source.updateOne({hash}, {$set: {lastLinksPage: pageN}}).exec(() => {
-        saveMany(models.item, buildItems(links), () => {
-          console.log(`Links saved for ${hash} source (page: ${pageN})`);
-          wsConnection.emit('changed', 'source');
-          callback();
+    models.item.find({sourceHash: hash}).remove().exec((err, r) => {
+      let linksPage = source.lastLinksPage === 0 ? 1 : source.lastLinksPage + 1;
+      const onLinksExists = (links, pageN, callback) => {
+        models.source.updateOne({hash}, {$set: {lastLinksPage: pageN}}).exec(() => {
+          saveMany(models.item, buildItems(links), () => {
+            console.log(`Links saved for ${hash} source (page: ${pageN})`);
+            wsConnection.emit('changed', 'source');
+            callback();
+          });
         });
-      });
-    };
-    const onError = (error) => {
-      console.error(error);
-      process.exit(1);
-    };
-    const onEnd = () => {
-      models.source.updateOne({hash}, {$set: {
-        updating: false,
-        lastLinksPage: 0
-      }}).exec(() => {
+      };
+      const onError = (error) => {
+        console.error(error);
+        process.exit(1);
+      };
+      const onEnd = () => {
+        models.source.updateOne({hash}, {$set: {
+          updating: false,
+          lastLinksPage: 0
+        }}).exec(() => {
+          wsConnection.emit('changed', 'source');
+          console.log(`Successfully ended on page ${linksPage}`);
+          process.exit(0);
+        });
+      };
+      models.source.updateOne({hash}, {$set: {updating: true}}).exec(() => {
         wsConnection.emit('changed', 'source');
-        console.log(`Successfully ended on page ${linksPage}`);
-        process.exit(0);
-      });
-    };
-    models.source.updateOne({hash}, {$set: {updating: true}}).exec(() => {
-      wsConnection.emit('changed', 'source');
-      models.item.remove({
-        sourceHash: hash
-      }).exec(() => {
-        parsePage(source.link, linksPage, onLinksExists, onError, onEnd);
+        models.item.remove({
+          sourceHash: hash
+        }).exec(() => {
+          parsePage(source.link, linksPage, onLinksExists, onError, onEnd);
+        });
       });
     });
   });

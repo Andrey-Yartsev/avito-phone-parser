@@ -3,7 +3,6 @@ if (!process.argv[2]) {
   return;
 }
 
-const parseProcess = require('./lib/parse/process');
 const addParser = require('./lib/parse/addParser');
 
 const MAX_PROCESSES = 1;
@@ -38,7 +37,7 @@ require('./lib/db')(function (models) {
     parseProcess.init();
     let processN = 0;
     setInterval(function () {
-      //console.log('running ' + parseProcess.getN());
+      console.log('running ' + parseProcess.getN());
       if (parseProcess.getN() < MAX_PROCESSES) {
         processN = parseProcess.add();
         addParser(sourceHash, wsConnection, models, {
@@ -49,6 +48,8 @@ require('./lib/db')(function (models) {
         }, () => {
           wsConnection.emit('changed', 'item');
           parseProcess.remove(processN);
+        }, () => {
+          parseProcess.stop(models);
         });
       }
     }, 3000);

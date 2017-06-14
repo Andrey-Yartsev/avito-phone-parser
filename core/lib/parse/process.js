@@ -6,46 +6,42 @@ const dataFolder = './data/process/parseItem';
 module.exports = (sourceHash) => {
   let workers = 0;
   const getN = () => {
-    let n = 0;
-    fs.readdirSync(dataFolder).forEach(file => {
-      n++;
-    });
-    return n;
+    return workers;
   };
   const cleanup = () => {
-    fs.readdirSync(dataFolder).forEach(file => {
-      fs.unlinkSync(dataFolder + '/' + file);
-    });
   };
   return {
     init: () => {
       fs.writeFileSync(dataFolder + '/' + sourceHash, process.pid);
     },
-
     start: () => {
-      const parse = spawn('node', ['parse.js', sourceHash], {
+      spawn('node', ['parse.js', sourceHash], {
         detached: true
       });
     },
-    stop: () => {
-      cleanup();
+    stop: (models) => {
+      models.item.updateMany(
+        {sourceHash: sourceHash},
+        {$set: {parsing: false}}).exec(() => {
+        //
+        const pid = fs.readFileSync(dataFolder + '/' + sourceHash);
+        fs.unlinkSync(dataFolder + '/' + sourceHash);
+        spawn('kill', [pid], {
+          detached: true
+        });
+      });
     },
     cleanup,
     inProgress: () => {
-      let n = 0;
-      fs.readdirSync(dataFolder).forEach(file => {
-        n++;
-      });
-      return !!n;
+      return fs.existsSync(dataFolder + '/' + sourceHash);
     },
     add: () => {
-      let n = getN() + 1;
-      fs.writeFileSync(dataFolder + '/' + sourceHash + '_' + n);
-      return n;
+      workers++;
+      return workers;
     },
     getN,
-    remove: (n) => {
-      fs.unlinkSync(dataFolder + '/' + sourceHash + '_' + n);
+    remove: () => {
+      workers--;
     }
   }
 };

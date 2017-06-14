@@ -42,8 +42,6 @@ const menu = `
 
 <p>
   <a href="/sources">Выдачи</a> | 
-  <a href="/start-parsing">Запустить</a> | 
-  <a href="/stop-parsing">Остановить</a> |
   <a href="/settings">Настройки</a>
 </p>
 `;
@@ -405,14 +403,15 @@ module.exports = [{
   handler: function (request, reply) {
     const parseProcess = require('../parse/process')(request.params.sourceHash);
     parseProcess.start();
-    reply.redirect('/items/' + request.params.sourceHash);
+    setTimeout(() => {
+      reply.redirect('/items/' + request.params.sourceHash);
+    }, 1000);
   }
 }, {
   method: 'GET',
   path: '/stop-item-parsing/{sourceHash}',
   handler: function (request, reply) {
-    const parseProcess = require('../parse/process')(request.params.sourceHash);
-    parseProcess.stop();
+    require('../parse/process')(request.params.sourceHash).stop(request.models);
     reply.redirect('/items/' + request.params.sourceHash);
   }
 }, {
