@@ -5,11 +5,8 @@ const webdriverio = require('./build');
 const fs = require('fs');
 
 const client = webdriverio.remote({
-  desiredCapabilities: {
-    browser: 'chrome',
-    browserName: 'chrome'
-  },
-  logLevel: 'verbose'
+  desiredCapabilities: {browserName: 'firefox'},
+  logLevel: 'none'
 }).init();
 
 const writeImage = (base64Data) => {
@@ -21,29 +18,34 @@ const writeImage = (base64Data) => {
   console.log('Phone parsed successfully');
 };
 
+/*
+ Exit codes:
+ 13 - phone not found
+ */
+
 const parseItem = () => {
   const tooltipClassName = 'seller-info-avatar-tooltip';
-  console.log('!!!');
   return new Promise(function (resolve, reject) {
     client
       .url('https://www.avito.ru/' + process.env.URI)
-      .execute(function(tooltipClassName) {
-        var elements = document.getElementsByClassName(tooltipClassName);
+      .execute(function (tooltipClassName) {
+        let elements = document.getElementsByClassName(tooltipClassName);
         if (elements.length) {
           elements[0].style.display = 'none';
         }
       }, tooltipClassName);
-       client.isExisting('.item-phone-number button').then((existing) => {
-         if (existing) {
-          client.click('.item-phone-number button')
-            .pause(1000)
-            .getAttribute('.item-phone-number img', 'src').then(writeImage)
-            .end()
-            .catch((e) => console.log(e))
-         } else {
-           console.log("Phone not found");
-         }
-      })
+    client.isExisting('.item-phone-number button').then((existing) => {
+      if (existing) {
+        client.click('.item-phone-number button')
+          .pause(1000)
+          .getAttribute('.item-phone-number img', 'src').then(writeImage)
+          .end()
+      } else {
+        console.log("Phone not found");
+        client.end();
+        process.exit(13);
+      }
+    })
   })
 };
 

@@ -18,9 +18,10 @@ module.exports = (sourceHash) => {
   };
   return {
     start: () => {
-      spawn('node', ['parse.js', sourceHash], {
+      const parse = spawn('node', ['parse.js', sourceHash], {
         detached: true
       });
+
     },
     stop: () => {
       cleanup();
