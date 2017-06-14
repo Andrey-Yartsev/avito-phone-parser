@@ -51,20 +51,18 @@ const itemsMenu = (sourceHash) => {
   const inProgress = parseProcess(sourceHash).inProgress();
   let parseBtn;
   if (inProgress) {
-    parseBtn = `<a href="/stop-item-parsing/${sourceHash}">Стоп</a>`;
+    parseBtn = `<a href="/stop-item-parsing/${sourceHash}">Стоп (парс.тел.)</a> | <a href="/items/${sourceHash}/parsing">Парсятся</a> | `;
   } else {
-    parseBtn = `<a href="/start-item-parsing/${sourceHash}">Старт</a>`;
+    parseBtn = `<a href="/start-item-parsing/${sourceHash}">Старт (парс.тел.)</a> | `;
   }
 
   return `
 <p>
   <a href="/items/${sourceHash}">Все</a> | 
-  ${parseBtn} |
-  <a href="/items/${sourceHash}/parsing">Парсятся</a> | 
+  ${parseBtn}
   <a href="/items/${sourceHash}/with-phone">С телефоном</a> | 
   <a href="/items/${sourceHash}/called">Звонки</a> | 
   <a href="/items/${sourceHash}/calling">Дозвон</a> | 
-  <a href="/items/${sourceHash}/cleanup">Очистка</a> | 
   <a href="/test-items/${sourceHash}">Тестовые телефоны</a> | 
   <a href="/create-test-item/${sourceHash}">Добавить тестовый телефон</a>
 </p>`;
@@ -131,7 +129,6 @@ socket.on('changed', function (what) {
         callStatus = callStatuses[v.callStatus] || v.callStatus;
       }
 
-
       let parsing = v.parsing ? 'парсится' : '';
 
       let lastCallDt = '';
@@ -142,7 +139,6 @@ socket.on('changed', function (what) {
       if (v.resultDt) {
         resultDt = dateFormat(new Date(v.resultDt));
       }
-
 
       html += `<tr>
 <td>${v.id}</td>
