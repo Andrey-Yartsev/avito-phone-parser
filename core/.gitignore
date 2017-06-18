@@ -2,6 +2,7 @@ data/image/*
 data/one/*
 data/links/*
 data/phone/*
+data/settings.json
 !.dummy
 node_modules
 .env
