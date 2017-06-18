@@ -7,6 +7,8 @@ const base = 'https://www.avito.ru/';
 const wsClient = require("socket.io-client");
 const wsConnection = wsClient.connect("http://localhost:3050/");
 
+const settings = JSON.parse(require('fs').readFileSync('data/settings.json'));
+
 const parsePage = (link, pageN, onLinksExists, onError, onEnd) => {
   let links = [];
   const sep = link.match(/\?/) ? '&' : '?';
@@ -28,6 +30,16 @@ const parsePage = (link, pageN, onLinksExists, onError, onEnd) => {
     const $ = cheerio.load(body);
     const linkElements = $('body').find('.catalog-list .item-description-title-link');
     for (let i = 0; i < linkElements.length; i++) {
+      if (settings.linksParseLimit) {
+        let linksParseLimit = parseInt(settings.linksParseLimit);
+        if (i === linksParseLimit) {
+          console.log('Parsing complete on limit ' + linksParseLimit);
+          onLinksExists(links, pageN, () => {
+            onEnd();
+          });
+          return;
+        }
+      }
       links.push(linkElements[i].attribs.href);
     }
     console.log('Parsed ' + pageN + ' page. Links count: ' + links.length);

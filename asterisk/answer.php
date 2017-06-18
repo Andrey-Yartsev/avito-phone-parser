@@ -8,12 +8,13 @@ $root = dirname(__DIR__);
 $agi = new AGI();
 $agi->answer();
 $id = $agi->getVar('id');
+$source = $agi->getVar('source');
 
 $agi->conlog("cd $root/core && node callResult.js $id pickup");
 $r = `cd $root/core && node callResult.js $id pickup`;
 $agi->conlog($r);
 
-$r = $agi->getDigit(__DIR__.'/sound/hello');
+$r = $agi->getDigit(__DIR__.'/sound/'.$source);
 
 if (isset($r['data']) and $r['data'] === 'timeout') {
     $accepted = 'timeout';

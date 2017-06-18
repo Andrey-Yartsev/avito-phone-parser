@@ -211,7 +211,7 @@ socket.on('changed', function (what) {
 <td>${v.id}</td>
 <td>${url}</td>
 <td>${parsing}</td>
-<td>${v.phone}</td>
+<td>${v.phone === undefined ? '-' : v.phone}</td>
 <td>${lastCallDt}<br>${resultDt}</td>
 <td>${callStatus}</td>
 <td>${accepted}</td>
@@ -268,6 +268,7 @@ const settingsForm = () => {
   if (!settings.clientSmsText) settings.clientSmsText = '';
   if (!settings.managerSmsText) settings.managerSmsText = '';
   if (!settings.managerPhone) settings.managerPhone = '';
+  if (!settings.linksParseLimit) settings.linksParseLimit = '';
   return `
 <h2>Настройки</h2>
 
@@ -283,6 +284,10 @@ const settingsForm = () => {
 <p>
   Телефон менеджера: *<br />
   <input name="managerPhone" value="${settings.managerPhone}" />
+</p>
+<p>
+  Лимит ссылок при парсинге источника: *<br />
+  <input name="linksParseLimit" value="${settings.linksParseLimit}" />
 </p>
 <p>
   <input type="submit" value="Сохранить" class="btn btn-default" />
@@ -317,16 +322,18 @@ socket.on('changed', function (what) {
         let links = count ?
           `<a href="/items/${v.hash}" class="btn btn-default"><b>Ссылки</b> (${count})</a> ` +
           `<a href="/items-with-phone/${v.hash}" class="btn btn-default">Ссылки с телефоном</a>` : '';
-        let updating = v.updating ? `<i>обновляется</i>` : '';
+        let updating = v.updating ?
+          `<span class="btn btn-primary">Обновляются</span>` :
+          `<a href="/parse-source/${v.hash}" class="btn btn-warning">Обновить ссылки</a>`;
         html += `<li>
 <h3><a href="/items/${v.hash}"><b>${v.title}</b></a> <span class="label label-default">${v.hash}</span></h3>
 <p>
   ${updating}
+   
   ${links}
   <a href="https://www.avito.ru/${v.link}" target="_blank" 
   class="btn btn-default" 
   data-toggle="tooltip" data-placement="top" title="Ссылка на выдачу Авито">Avito</a>
-  <a href="/parse-source/${v.hash}" class="btn btn-default">Обновить ссылки</a> 
   <a href="/delete-source-links/${v.hash}" class="btn btn-default">Удалить ссылки</a> 
   <a href="/delete-source/${v.hash}" class="btn btn-default">Удалить выдачу</a>
 </p>
@@ -638,7 +645,11 @@ module.exports = [{
       request.models,
       wsConnection,
       () => {
-        reply('Звоню. <a href="javascript:history.back();">Назад</a>');
+        if (request.raw.req.headers.referer) {
+          reply.redirect(request.raw.req.headers.referer);
+        } else {
+          reply('Звоню');
+        }
       }
     );
   }
