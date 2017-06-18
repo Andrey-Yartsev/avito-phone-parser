@@ -1,0 +1,17 @@
+.body {
+padding: 0 20px;
+position: relative;
+}
+.page-header {
+margin-top: 0;
+margin-bottom: 15px;
+}
+h2 {
+font-size: 22px;
+}
+form input[type=submit] {
+margin-top: 15px;
+}
+.panel {
+margin-top: 15px;
+}

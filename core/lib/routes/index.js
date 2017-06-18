@@ -21,25 +21,14 @@ const menu = `
 <html>
 <head>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-  <link href="/i/styles.css" rel="stylesheet">
+
+  <link href="/i/layout.css" rel="stylesheet">
+  <link href="/i/pagination.css" rel="stylesheet">
+  <link href="/i/upload.css" rel="stylesheet">
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.1/socket.io.slim.js"></script>
   <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-  
-  <style>
-  .pagination {
-  margin-bottom: 10px;
-  }
-  .pagination a, .pagination b {
-  display: inline-block;
-  padding: 5px 20px;
-  border: 1px solid #ccc;
-  margin-right: 10px;
-  }
-  .pagination b {
-  border: 1px solid #555;
-  }
-</style>
 </head>
 <body>
 
@@ -57,7 +46,7 @@ const menu = `
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-      <a class="navbar-brand" href="#">Avito Parser</a>
+      <a class="navbar-brand" href="/">Avito Parse'n'Call</a>
     </div>
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
@@ -88,7 +77,14 @@ const menu = `
     </div>
   </div>
 </nav>
+<div class="body">
 `;
+
+const footer = `</div></body></html>`;
+
+const renderLayout = (reply, body) => {
+  reply(menu + body + footer);
+};
 
 const soundExists = (sourceHash) => {
   return fs.existsSync(soundsAsterFolder + '/' + sourceHash + '.gsm');
@@ -99,39 +95,47 @@ const itemsMenu = (sourceHash) => {
   const callInProgress = require('../call/process')(sourceHash).inProgress();
   let parseBtn;
   if (parseInProgress) {
-    parseBtn = `<a href="/stop-item-parsing/${sourceHash}">Стоп (парс.тел.)</a> | <a href="/items/${sourceHash}/parsing">Парсятся</a> | `;
+    parseBtn =
+      `<a href="/stop-item-parsing/${sourceHash}" class="btn btn-default btn-primary">Стоп (парс.тел.)</a>` +
+      `<a href="/items/${sourceHash}/parsing" class="btn btn-default">Парсятся</a>`;
   } else {
-    parseBtn = `<a href="/start-item-parsing/${sourceHash}">Старт (парс.тел.)</a> | `;
+    parseBtn =
+      `<a href="/start-item-parsing/${sourceHash}" class="btn btn-default"></span>Старт (парс.тел.)</a> `;
   }
 
   let soundBtns = ``;
   if (soundExists(sourceHash)) {
-    soundBtns = `<a href="/source-sound/${sourceHash}">Прослушать звук</a> | `;
+    soundBtns = `<a href="/source-sound/${sourceHash}" class="btn btn-default">Прослушать звук</a>`;
     if (callInProgress) {
-      soundBtns += `<a href="/stop-calling/${sourceHash}">Стоп (обзвон)</a> | <a href="/items/${sourceHash}/parsing">Парсятся</a> | `;
+      soundBtns +=
+        `<a href="/stop-calling/${sourceHash}" class="btn btn-default btn-primary">Стоп (обзвон)</a>` +
+        ``;
     } else {
-      soundBtns += `<a href="/start-calling/${sourceHash}">Старт (обзвон)</a> | `;
+      soundBtns +=
+        `<a href="/start-calling/${sourceHash}" class="btn btn-default">Старт (обзвон)</a>`;
     }
   }
 
   return `
-<p>
-  <a href="/items/${sourceHash}">Все</a> | 
+<div class="btn-group">
+  <a href="/items/${sourceHash}" class="btn btn-default">Все</a>
   ${parseBtn}
-  <a href="/items/${sourceHash}/with-phone">С телефоном</a> ||| 
-  <a href="/source-upload-sound/${sourceHash}">Загрузить звук</a> | 
+  <a href="/items/${sourceHash}/with-phone" class="btn btn-default">С телефоном</a>
+</div>
+<div class="btn-group">
+  <a href="/source-upload-sound/${sourceHash}" class="btn btn-default">Загрузить звук</a>
   ${soundBtns}
-  <a href="/items/${sourceHash}/called">Завершенные звонки</a> | 
-  <a href="/items/${sourceHash}/calling">Звонки в процессе</a> | 
-  <a href="/test-items/${sourceHash}">Тестовые телефоны</a> | 
-  <a href="/create-test-item/${sourceHash}">Добавить тестовый телефон</a>
-</p>`;
+  <a href="/items/${sourceHash}/called" class="btn btn-default">Завершенные звонки</a>
+  <a href="/items/${sourceHash}/calling" class="btn btn-default">Звонки в процессе</a>
+  <a href="/test-items/${sourceHash}" class="btn btn-default">Тестовые телефоны</a>
+  <a href="/create-test-item/${sourceHash}" class="btn btn-default">Добавить тестовый телефон</a>
+</div>`;
 };
 
 const table = function (r, call) {
   let html = ``;
   if (!r.length) {
-    html += '<p>Не найдены</p>';
+    html += '<p>&nbsp;</p><div class="alert alert-info">Не найдены</div>';
   } else {
     html += `
 <script>
@@ -142,9 +146,9 @@ socket.on('changed', function (what) {
 });
 </script>
 
-<div id="table">
+<div id="table" class="panel panel-default">
 <div>
-<table border="1">
+<table class="table">
 <tr>
   <th>ID</th>
   <th>Ссылка</th>
@@ -171,8 +175,11 @@ socket.on('changed', function (what) {
         url = `<a href="https://avito.ru${v.url}" target="_blank">Ссылка</a>`;
       }
 
-      let callLink = '<td></td>';
-      if (call && v.phone) callLink = `<td><a href="/call/${v._id}">Позвонить</a></td>`;
+      let callLink = '';
+      if (call && v.phone) callLink = `<a href="/call/${v._id}" class="btn btn-default">Позвонить</a>`;
+
+      deleteLink = `<a href="/delete-item/${v._id}" class="btn btn-danger">Удалить</a>`;
+
       let accepted;
       if (v.accepted === 1) {
         accepted = 'Да';
@@ -209,7 +216,10 @@ socket.on('changed', function (what) {
 <td>${callStatus}</td>
 <td>${accepted}</td>
 <td>${v.retries}</td>
-${callLink}
+<td>
+  ${deleteLink}
+  ${callLink}
+</td>
 </tr>`;
     }
     html += '</table>';
@@ -222,10 +232,10 @@ const createForm = function (sourceHash) {
 <h2>Добавить телефон</h2>
 <form method="POST" action="/create-test-item/${sourceHash}">
 <p>
-  <input name="phone" />
+  <input name="phone" placeholder="8XXXXXXXXXX" />
 </p>
 <p>
-  <input type="submit" value="Создать" />
+  <input type="submit" value="Создать" class="btn btn-default" />
 </p>
 </form>
 `;
@@ -236,7 +246,7 @@ const createSourceForm = function () {
 <div class="page-header">
   <h2>Добавить выдачу</h2>
 </div>
-<form method="POST" action="/create-source" class="navbar-form">
+<form method="POST" action="/create-source" class="form">
 <p>
   Название: *<br />
   <input name="title" style="width:300px;" placeholder="Россия - транспорт"/>
@@ -260,6 +270,7 @@ const settingsForm = () => {
   if (!settings.managerPhone) settings.managerPhone = '';
   return `
 <h2>Настройки</h2>
+
 <form method="POST" action="/settings">
 <p>
   Текст СМС клиенту: *<br />
@@ -274,14 +285,14 @@ const settingsForm = () => {
   <input name="managerPhone" value="${settings.managerPhone}" />
 </p>
 <p>
-  <input type="submit" value="Сохранить" />
+  <input type="submit" value="Сохранить" class="btn btn-default" />
 </p>
 </form>
 `;
 
 };
 
-const renderSources = (request, reply, prependHtml) => {
+const renderSources = (request, reply) => {
   request.models.item.aggregate([
     {"$group": {_id: "$sourceHash", count: {$sum: 1}}}
   ]).exec((err, r) => {
@@ -291,7 +302,7 @@ const renderSources = (request, reply, prependHtml) => {
     }
 
     request.models.source.find().exec((err, r) => {
-      let html = prependHtml + `
+      let html = `
 <script>
 socket.on('changed', function (what) {
   if (what !== 'source') return;
@@ -308,7 +319,7 @@ socket.on('changed', function (what) {
           `<a href="/items-with-phone/${v.hash}" class="btn btn-default">Ссылки с телефоном</a>` : '';
         let updating = v.updating ? `<i>обновляется</i>` : '';
         html += `<li>
-<h3><a href="/items/${v.hash}"><b>${v.title}</b></a> <span class="label label-default">(${v.hash})</span></h3>
+<h3><a href="/items/${v.hash}"><b>${v.title}</b></a> <span class="label label-default">${v.hash}</span></h3>
 <p>
   ${updating}
   ${links}
@@ -323,7 +334,7 @@ socket.on('changed', function (what) {
 `;
       }
       html += '</table>';
-      reply(html);
+      renderLayout(reply, html);
     });
   });
 
@@ -361,7 +372,9 @@ const renderItems = function (request, reply, sourceHash, filter, prependHtml, c
       skip(pagination.options.n * (paginationData.page - 1)).//
       limit(pagination.options.n).//
       exec(function (err, r) {
-        reply(menu + prependHtml + '<span>Всего: ' + totalRecordsCount + '</span><div class="pagination">' + paginationData.pNums + '</div>' + table(r, true));
+        reply(menu + prependHtml + 
+          '<div class="pagination"><span class="total">Всего: ' + totalRecordsCount + '</span>' + paginationData.pNums + '</div>'
+          + table(r, true));
       });
     });
 
@@ -414,9 +427,9 @@ module.exports = [{
   }
 }, {
   method: 'GET',
-  path: '/',
+  path: '/welcome',
   handler: function (request, reply) {
-    reply(menu + '<h2>Welcome to Avito Parser</h2>');
+    reply(menu + `<h2>Welcome to Avito Parse'n'Call</h2>`);
   }
 }, {
   method: 'GET',
@@ -485,8 +498,8 @@ module.exports = [{
   method: 'GET',
   path: '/stop-item-parsing/{sourceHash}',
   handler: function (request, reply) {
-    models.item.updateMany(
-      {sourceHash: sourceHash},
+    request.models.item.updateMany(
+      {sourceHash: request.params.sourceHash},
       {$set: {parsing: false}}
     ).exec(() => {
       require('../parse/process')(request.params.sourceHash).stop();
@@ -505,7 +518,19 @@ module.exports = [{
   method: 'GET',
   path: '/create-test-item/{sourceHash}',
   handler: function (request, reply) {
-    reply(createForm(request.params.sourceHash));
+    reply(menu + itemsMenu(request.params.sourceHash) + createForm(request.params.sourceHash));
+  }
+}, {
+  method: 'GET',
+  path: '/delete-item/{id}',
+  handler: function (request, reply) {
+    if (request.raw.req.headers.referer) {
+      request.models.item.find({_id: request.params.id}).remove().exec((err, r) => {
+        reply.redirect(request.raw.req.headers.referer);
+      });
+    } else {
+      reply('done');
+    }
   }
 }, {
   method: 'POST',
@@ -529,7 +554,13 @@ module.exports = [{
   method: 'GET',
   path: '/sources',
   handler: function (request, reply) {
-    renderSources(request, reply, menu);
+    renderSources(request, reply);
+  }
+}, {
+  method: 'GET',
+  path: '/',
+  handler: function (request, reply) {
+    renderSources(request, reply);
   }
 }, {
   method: 'GET',
@@ -613,16 +644,6 @@ module.exports = [{
   }
 }, {
   method: 'GET',
-  path: '/source-upload-sound/{hash}',
-  handler: function (request, reply) {
-    let page = fs.readFileSync(staticFolder + '/index.html');
-    page = page.toString().replace(/{{uploadUrl}}/, '/source-upload-sound/' + request.params.hash);
-    page = page.toString().replace(/{{redirectUrl}}/, '/source-sound/' + request.params.hash);
-    reply(menu + itemsMenu(request.params.hash) + page);
-    // reply.file();
-  }
-}, {
-  method: 'GET',
   path: '/source-sound/{hash}',
   handler: (request, reply) => {
     let fileName = request.params.hash + '.mp3';
@@ -632,13 +653,23 @@ module.exports = [{
     }
     let stat = fs.statSync(soundsFolder + '/' + fileName);
     let html = `
+<div class="page-header"><h2>Прослушать звук</h2></div>
 <div class="media">
-<audio controls autoplay preload="metadata" style="width:300px;">
+<audio controls preload="metadata" style="width:300px;">
   <source src="/i/sound/${fileName}?${stat.mtime}" type="audio/mpeg">
 </audio>
 </div>
 `;
     reply(menu + itemsMenu(request.params.hash) + html);
+  }
+}, {
+  method: 'GET',
+  path: '/source-upload-sound/{hash}',
+  handler: function (request, reply) {
+    let page = fs.readFileSync(staticFolder + '/upload.html');
+    page = page.toString().replace(/{{uploadUrl}}/, '/source-upload-sound/' + request.params.hash);
+    page = page.toString().replace(/{{redirectUrl}}/, '/source-sound/' + request.params.hash);
+    reply(menu + itemsMenu(request.params.hash) + page);
   }
 }, {
   method: 'POST',
@@ -661,8 +692,8 @@ module.exports = [{
         }
         const file = fs.createWriteStream(wavFile);
         file.on('error', function (err) {
-          console.error('Error');
           console.error(err);
+          reply(err);
         });
         data.file.pipe(file);
         data.file.on('end', function (err) {
@@ -672,18 +703,24 @@ module.exports = [{
             headers: data.file.hapi.headers
           };
           const gsmFile = soundsAsterFolder + '/' + request.params.hash + '.gsm';
-
           exec(`sox -V ${wavFile} -r 8000 -c 1 -t gsm ${gsmFile}`, function (err, err2, output) {
-            if (err) console.log(err);
-            if (err2) console.log(err2);
+            if (err) {
+              console.error(err);
+              reply({error: err.code});
+              return;
+            }
             console.log('gsm converted');
             exec(`lame -b 32 --resample 8 -a ${wavFile} ${pm3File}`,
               function (err, err2, output) {
+                if (err) {
+                  console.error(err);
+                  reply({error: err.code});
+                  return;
+                }
                 console.log('mp3 converted');
                 reply(ret);
               });
           });
-
         });
       }
     }

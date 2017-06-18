@@ -1,0 +1,20 @@
+  .pagination {
+  position: absolute;
+  top: -25px;
+  right: 20px;
+  margin-bottom: 10px;
+  }
+  .pagination a, .pagination b {
+  display: inline-block;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  margin-right: 5px;
+  border-radius: 5px;
+  }
+  .pagination b {
+  border: 1px solid #999;
+  }
+.total {
+display: inline-block;
+margin-right: 20px;
+}

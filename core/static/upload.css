@@ -2,18 +2,8 @@
 outline: 0 !important;
 }
 
-html,
-body {
-height: 100%;
-}
-
-body {
-text-align: center;
-font-family: 'Raleway', sans-serif;
-}
-
-.row {
-margin-top: 80px;
+.upload-block {
+max-width: 500px;
 }
 
 .upload-btn {
