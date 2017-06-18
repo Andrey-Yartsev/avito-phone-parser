@@ -1,0 +1,3 @@
+[submodule "amun"]
+	path = amun
+	url = git@github.com:majexa/amun.git

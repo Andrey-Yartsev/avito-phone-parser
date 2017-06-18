@@ -12,7 +12,12 @@ module.exports = (id, models, wsConnection, callback) => {
     }).exec(function (err, r) {
       wsConnection.emit('changed', 'item');
       console.log(`calling ${id}, ${r.phone}`);
-      exec('sudo php /usr/src/collector/asterisk/call.php ' + r.id + ' ' + r.phone, function (err, err2, output) {
+      exec('sudo php /usr/src/collector/asterisk/call.php ' +
+        r.id + ' ' + r.phone + ' ' + r.sourceHash,
+        function (err, err2, output) {
+
+        if (err) console.log(err);
+        if (err2) console.log(err2);
         callback();
       });
     });

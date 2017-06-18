@@ -1,4 +1,5 @@
 const Hapi = require('hapi');
+const Inert = require('inert');
 const server = new Hapi.Server();
 server.connection({
   port: 8050,
@@ -8,6 +9,7 @@ server.connection({
   port: 3050,
   labels: ['ws']
 });
+server.register(Inert, () => {});
 
 const cpServer = server.select('cp');
 const wsServer = server.select('ws');

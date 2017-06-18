@@ -1,46 +1,33 @@
-const wsClient = require("socket.io-client");
-const wsConnection = wsClient.connect("http://localhost:3050/");
+if (!process.argv[2]) {
+  console.log('Syntax: node caller.js {sourceHash}');
+  return;
+}
+const sourceHash = process.argv[2];
 
-
-const call = require('./lib/utils/call');
-
-const maxRetries = 3;
-const retryInterval = 5; // minutes
-
-require('./lib/db')(function (models) {
-
-  const tick = () => {
-    models.item.find({
-      callStatus: 'calling'
-    }).exec((err, items) => {
-      for (let item of items) {
-        let minutes = Math.round((new Date() - new Date(item.lastCallDt)) / 1000 / 60);
-        console.log(minutes + ' > ' + retryInterval);
-        if (minutes >= retryInterval) {
-          if (item.retries === maxRetries) {
-            console.log(`maxRetries reached for ${item._id}, ${item.phone}`);
-            models.item.updateOne({_id: item._id}, {
-              $set: {callStatus: 'maxRetriesReached'}
-            }, () => {
-              wsConnection.emit('changed', 'item');
-            });
-          } else {
-            let retry = item.retries + 1;
-            models.item.updateOne({_id: item._id}, {$set: {retries: retry}}, () => {
-              console.log(`attempt ${retry} for ${item._id}, ${item.phone}`);
-              call(item._id, models, wsConnection, () => {
-                console.log('call sent');
-              });
-            });
-          }
-        }
-      }
+if (process.argv[3] === 'reset') {
+  require('./lib/db')(function (models) {
+    models.item.update({
+      sourceHash
+    }, {
+      lastCallDt: null
+    }, (err, r) => {
+      console.log(r);
+      process.exit(1);
     });
-  };
+  });
+} else {
+  const wsClient = require("socket.io-client");
+  const wsConnection = wsClient.connect("http://localhost:3050/");
+  const AddCall = require('./lib/call/add');
 
-  tick();
-  setInterval(tick, 5000);
+  const callProcess = require('./lib/call/process')(sourceHash);
 
-});
+  require('./lib/db')(function (models) {
+    const addCall = AddCall(models, wsConnection, sourceHash);
+    callProcess.init();
+    addCall();
+    setInterval(addCall, 60000);
+  });
+}
 
 

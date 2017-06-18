@@ -1,11 +1,17 @@
 require('dotenv').config();
 const fs = require('fs');
+
 const exec = require('child_process').exec;
 const spawn = require('child_process').spawn;
 const hashCode = require('../../lib/hashCode');
 const dateFormat = require('dateformat');
 
-const call = require('../utils/call');
+const Path = require('path');
+const staticFolder = Path.join(__dirname, '../../static');
+const soundsFolder = Path.join(staticFolder, '/sound');
+const soundsAsterFolder = Path.join(__dirname, '../../../asterisk/sound');
+
+const call = require('../call/call');
 
 const wsClient = require("socket.io-client");
 const wsConnection = wsClient.connect("http://localhost:3050/");
@@ -14,11 +20,12 @@ const host = process.env.SERVER_HOST || 'localhost';
 const menu = `
 <html>
 <head>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.1/socket.io.slim.js"></script>
-<script
-  src="https://code.jquery.com/jquery-3.2.1.min.js"
-  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
-  crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+  <link href="/i/styles.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.1/socket.io.slim.js"></script>
+  <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+  
   <style>
   .pagination {
   margin-bottom: 10px;
@@ -40,29 +47,82 @@ const menu = `
 	var socket = io.connect('http://${host}:3050');
 </script>
 
-<p>
-  <a href="/sources">Выдачи</a> | 
-  <a href="/settings">Настройки</a>
-</p>
+<nav class="navbar navbar-default" role="navigation">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+      <a class="navbar-brand" href="#">Avito Parser</a>
+    </div>
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+          <a href="№" class="dropdown-toggle" data-toggle="dropdown">Выдачи <b class="caret"></b></a>
+          <ul class="dropdown-menu">
+          
+            <li><a href="/sources">Посмотреть</a></li>
+            <li><a href="/add-source">Добавить выдачу</a></li>
+          </ul>
+        </li> 
+        <li><a href="/settings">Настройки</a><li>
+        <!--
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <b class="caret"></b></a>
+          <ul class="dropdown-menu">
+            <li><a href="#">Действие</a></li>
+            <li><a href="#">Другое действие</a></li>
+            <li><a href="#">Что-то еще</a></li>
+            <li class="divider"></li>
+            <li><a href="#">Отдельная ссылка</a></li>
+            <li class="divider"></li>
+            <li><a href="#">Еще одна отдельная ссылка</a></li>
+          </ul>
+        </li>
+        -->
+      </ul>
+    </div>
+  </div>
+</nav>
 `;
 
+const soundExists = (sourceHash) => {
+  return fs.existsSync(soundsAsterFolder + '/' + sourceHash + '.gsm');
+};
+
 const itemsMenu = (sourceHash) => {
-  const parseProcess = require('../parse/process');
-  const inProgress = parseProcess(sourceHash).inProgress();
+  const parseInProgress = require('../parse/process')(sourceHash).inProgress();
+  const callInProgress = require('../call/process')(sourceHash).inProgress();
   let parseBtn;
-  if (inProgress) {
+  if (parseInProgress) {
     parseBtn = `<a href="/stop-item-parsing/${sourceHash}">Стоп (парс.тел.)</a> | <a href="/items/${sourceHash}/parsing">Парсятся</a> | `;
   } else {
     parseBtn = `<a href="/start-item-parsing/${sourceHash}">Старт (парс.тел.)</a> | `;
+  }
+
+  let soundBtns = ``;
+  if (soundExists(sourceHash)) {
+    soundBtns = `<a href="/source-sound/${sourceHash}">Прослушать звук</a> | `;
+    if (callInProgress) {
+      soundBtns += `<a href="/stop-calling/${sourceHash}">Стоп (обзвон)</a> | <a href="/items/${sourceHash}/parsing">Парсятся</a> | `;
+    } else {
+      soundBtns += `<a href="/start-calling/${sourceHash}">Старт (обзвон)</a> | `;
+    }
   }
 
   return `
 <p>
   <a href="/items/${sourceHash}">Все</a> | 
   ${parseBtn}
-  <a href="/items/${sourceHash}/with-phone">С телефоном</a> | 
-  <a href="/items/${sourceHash}/called">Звонки</a> | 
-  <a href="/items/${sourceHash}/calling">Дозвон</a> | 
+  <a href="/items/${sourceHash}/with-phone">С телефоном</a> ||| 
+  <a href="/source-upload-sound/${sourceHash}">Загрузить звук</a> | 
+  ${soundBtns}
+  <a href="/items/${sourceHash}/called">Завершенные звонки</a> | 
+  <a href="/items/${sourceHash}/calling">Звонки в процессе</a> | 
   <a href="/test-items/${sourceHash}">Тестовые телефоны</a> | 
   <a href="/create-test-item/${sourceHash}">Добавить тестовый телефон</a>
 </p>`;
@@ -173,8 +233,10 @@ const createForm = function (sourceHash) {
 
 const createSourceForm = function () {
   return `
-<h2>Добавить выдачу</h2>
-<form method="POST" action="/create-source">
+<div class="page-header">
+  <h2>Добавить выдачу</h2>
+</div>
+<form method="POST" action="/create-source" class="navbar-form">
 <p>
   Название: *<br />
   <input name="title" style="width:300px;" placeholder="Россия - транспорт"/>
@@ -184,7 +246,7 @@ const createSourceForm = function () {
   <input name="link" style="width:500px;" placeholder="https://www.avito.ru/rossiya/transport" />
 </p>
 <p>
-  <input type="submit" value="Создать" />
+  <input type="submit" value="Создать" class="btn btn-default" />
 </p>
 </form>
 `;
@@ -241,15 +303,21 @@ socket.on('changed', function (what) {
 <ul>`;
       for (let v of r) {
         let count = counts[v.hash] || 0;
-        let links = count ? `<a href="/items/${v.hash}"><b>Ссылки</b> (${count})</a> | <a href="/items-with-phone/${v.hash}">Ссылки с телефоном</a> | ` : '';
+        let links = count ?
+          `<a href="/items/${v.hash}" class="btn btn-default"><b>Ссылки</b> (${count})</a> ` +
+          `<a href="/items-with-phone/${v.hash}" class="btn btn-default">Ссылки с телефоном</a>` : '';
         let updating = v.updating ? `<i>обновляется</i>` : '';
         html += `<li>
-<b>${v.title}</b> (${v.hash}) <a href="https://www.avito.ru/${v.link}" target="_blank">ссылка на выдачу avito</a>
+<h3><a href="/items/${v.hash}"><b>${v.title}</b></a> <span class="label label-default">(${v.hash})</span></h3>
 <p>
   ${updating}
   ${links}
-  <a href="/parse-source/${v.hash}">Обновить ссылки с выдачи</a> | 
-  <a href="/delete-source/${v.hash}">Удалить</a>
+  <a href="https://www.avito.ru/${v.link}" target="_blank" 
+  class="btn btn-default" 
+  data-toggle="tooltip" data-placement="top" title="Ссылка на выдачу Авито">Avito</a>
+  <a href="/parse-source/${v.hash}" class="btn btn-default">Обновить ссылки</a> 
+  <a href="/delete-source-links/${v.hash}" class="btn btn-default">Удалить ссылки</a> 
+  <a href="/delete-source/${v.hash}" class="btn btn-default">Удалить выдачу</a>
 </p>
 </li>
 `;
@@ -267,6 +335,8 @@ const renderItems = function (request, reply, sourceHash, filter, prependHtml, c
     hash: request.params.sourceHash
   }).exec(function (err, source) {
     let title = source ? `<h2>Выдача: ${source.title}</h2>` : '<h2>Не найден</h2>';
+    title = `<div class="page-header">${title}</div>`;
+
     prependHtml += title;
     prependHtml += itemsMenu(sourceHash);
     filter.sourceHash = sourceHash;
@@ -395,6 +465,14 @@ module.exports = [{
   }
 }, {
   method: 'GET',
+  path: '/items-with-phone/{sourceHash}',
+  handler: function (request, reply) {
+    renderItems(request, reply, request.params.sourceHash, {
+      phone: {$ne: null}
+    });
+  }
+}, {
+  method: 'GET',
   path: '/start-item-parsing/{sourceHash}',
   handler: function (request, reply) {
     const parseProcess = require('../parse/process')(request.params.sourceHash);
@@ -407,8 +485,13 @@ module.exports = [{
   method: 'GET',
   path: '/stop-item-parsing/{sourceHash}',
   handler: function (request, reply) {
-    require('../parse/process')(request.params.sourceHash).stop(request.models);
-    reply.redirect('/items/' + request.params.sourceHash);
+    models.item.updateMany(
+      {sourceHash: sourceHash},
+      {$set: {parsing: false}}
+    ).exec(() => {
+      require('../parse/process')(request.params.sourceHash).stop();
+      reply.redirect('/items/' + request.params.sourceHash);
+    });
   }
 }, {
   method: 'GET',
@@ -446,7 +529,13 @@ module.exports = [{
   method: 'GET',
   path: '/sources',
   handler: function (request, reply) {
-    renderSources(request, reply, menu + createSourceForm());
+    renderSources(request, reply, menu);
+  }
+}, {
+  method: 'GET',
+  path: '/add-source',
+  handler: function (request, reply) {
+    reply(menu + createSourceForm());
   }
 }, {
   method: 'POST',
@@ -477,6 +566,14 @@ module.exports = [{
       request.models.item.find({sourceHash: request.params.hash}).remove().exec((err, r) => {
         reply.redirect('/sources');
       });
+    });
+  }
+}, {
+  method: 'GET',
+  path: '/delete-source-links/{hash}',
+  handler: function (request, reply) {
+    request.models.item.find({sourceHash: request.params.hash}).remove().exec((err, r) => {
+      reply.redirect('/sources');
     });
   }
 }, {
@@ -513,6 +610,110 @@ module.exports = [{
         reply('Звоню. <a href="javascript:history.back();">Назад</a>');
       }
     );
+  }
+}, {
+  method: 'GET',
+  path: '/source-upload-sound/{hash}',
+  handler: function (request, reply) {
+    let page = fs.readFileSync(staticFolder + '/index.html');
+    page = page.toString().replace(/{{uploadUrl}}/, '/source-upload-sound/' + request.params.hash);
+    page = page.toString().replace(/{{redirectUrl}}/, '/source-sound/' + request.params.hash);
+    reply(menu + itemsMenu(request.params.hash) + page);
+    // reply.file();
+  }
+}, {
+  method: 'GET',
+  path: '/source-sound/{hash}',
+  handler: (request, reply) => {
+    let fileName = request.params.hash + '.mp3';
+    if (!fs.existsSync(soundsFolder + '/' + fileName)) {
+      reply('file "' + soundsFolder + '/' + fileName + '" does not exists');
+      return;
+    }
+    let stat = fs.statSync(soundsFolder + '/' + fileName);
+    let html = `
+<div class="media">
+<audio controls autoplay preload="metadata" style="width:300px;">
+  <source src="/i/sound/${fileName}?${stat.mtime}" type="audio/mpeg">
+</audio>
+</div>
+`;
+    reply(menu + itemsMenu(request.params.hash) + html);
+  }
+}, {
+  method: 'POST',
+  path: '/source-upload-sound/{hash}',
+  config: {
+    payload: {
+      output: 'stream',
+      parse: true,
+      allow: 'multipart/form-data',
+      maxBytes: 500000000
+    },
+    handler: (request, reply) => {
+      const data = request.payload;
+      if (data.file) {
+        const name = request.params.hash + '.wav';
+        const wavFile = soundsFolder + '/' + name;
+        const pm3File = soundsFolder + '/' + request.params.hash + '.mp3';
+        if (fs.existsSync(wavFile)) {
+          fs.unlinkSync(wavFile);
+        }
+        const file = fs.createWriteStream(wavFile);
+        file.on('error', function (err) {
+          console.error('Error');
+          console.error(err);
+        });
+        data.file.pipe(file);
+        data.file.on('end', function (err) {
+          const ret = {
+            status: 'success',
+            filename: data.file.hapi.filename,
+            headers: data.file.hapi.headers
+          };
+          const gsmFile = soundsAsterFolder + '/' + request.params.hash + '.gsm';
+
+          exec(`sox -V ${wavFile} -r 8000 -c 1 -t gsm ${gsmFile}`, function (err, err2, output) {
+            if (err) console.log(err);
+            if (err2) console.log(err2);
+            console.log('gsm converted');
+            exec(`lame -b 32 --resample 8 -a ${wavFile} ${pm3File}`,
+              function (err, err2, output) {
+                console.log('mp3 converted');
+                reply(ret);
+              });
+          });
+
+        });
+      }
+    }
+  }
+}, {
+  method: 'GET',
+  path: '/start-calling/{sourceHash}',
+  handler: function (request, reply) {
+    const callProcess = require('../call/process')(request.params.sourceHash);
+    callProcess.start();
+    setTimeout(() => {
+      reply.redirect('/items/' + request.params.sourceHash + '/calling');
+    }, 1000);
+  }
+}, {
+  method: 'GET',
+  path: '/stop-calling/{sourceHash}',
+  handler: function (request, reply) {
+    require('../call/process')(request.params.sourceHash).stop();
+    reply.redirect('/items/' + request.params.sourceHash + '/calling');
+  }
+}, {
+  method: 'GET',
+  path: '/i/{param*}',
+  handler: {
+    directory: {
+      path: staticFolder,
+      redirectToSlash: true,
+      index: true
+    }
   }
 }];
 

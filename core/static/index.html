@@ -1,0 +1,25 @@
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <span class="glyphicon glyphicon-cloud-upload"></span>
+                    <h2>Загрузка звука</h2>
+                    <h4>для выдачи</h4>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar"></div>
+                    </div>
+                    <button class="btn btn-lg upload-btn" type="button">Загрузить файл</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<input id="upload-input" type="file" name="image"></br>
+
+<script>
+    var uploadUrl = '{{uploadUrl}}';
+    var redirectUrl = '{{redirectUrl}}';
+</script>
+<script src="/i/upload.js"></script>
