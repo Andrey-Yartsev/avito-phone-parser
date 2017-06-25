@@ -47,9 +47,9 @@ require('./lib/db')(function (models) {
           parseDt: null
         }, () => {
           wsConnection.emit('changed', 'item');
-          parseProcess.remove(processN);
+          parseProcess.remove();
         }, () => {
-          parseProcess.stop(models);
+          parseProcess.stop();
         });
       }
     }, 3000);

@@ -1,8 +1,4 @@
-data/image/*
-data/one/*
-data/links/*
-data/phone/*
-data/settings.json
+data/*
 !.dummy
 node_modules
 .env

@@ -1,5 +1,6 @@
 const spawn = require('child_process').spawn;
 const fs = require('fs');
+const log = require('./log');
 
 module.exports = (dataFolder, script, sourceHash) => {
   let workers = 0;
@@ -8,11 +9,18 @@ module.exports = (dataFolder, script, sourceHash) => {
   };
   return {
     init: () => {
+      log.info(`write ${process.pid} to ${dataFolder}/${sourceHash}`);
       fs.writeFileSync(dataFolder + '/' + sourceHash, process.pid);
     },
     start: () => {
-      spawn('node', [script, sourceHash], {
+      const child = spawn('node', [script, sourceHash], {
         detached: true
+      });
+      // child.stderr.on('data', function (data) {
+      //   log.warn(data.toString());
+      // });
+      child.on('close', function (code) {
+        log.info(`Process ${script} ${sourceHash} has stopped` + (code ? `with code ${code}` : ''));
       });
     },
     stop: () => {

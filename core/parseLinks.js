@@ -1,7 +1,7 @@
 const request = require("request");
 const cheerio = require('cheerio');
-//const hashCode = require('./lib/hashCode');
 const saveMany = require('./lib/db/saveMany');
+const log = require('./lib/log');
 
 const base = 'https://www.avito.ru/';
 const wsClient = require("socket.io-client");
@@ -13,13 +13,13 @@ const parsePage = (link, pageN, onLinksExists, onError, onEnd) => {
   let links = [];
   const sep = link.match(/\?/) ? '&' : '?';
   const uri = base + link + sep + 'p=' + pageN;
-  console.log('Requesting ' + uri);
+  log.info('Requesting ' + uri);
   request({
     uri,
   }, function (error, response, body) {
-    console.log('Response code ' + response.statusCode);
+    log.info('Response code ' + response.statusCode);
     if (response.statusCode !== 200) {
-      console.log('Parsing complete at ' + (pageN - 1) + ' page');
+      log.info('Parsing complete at ' + (pageN - 1) + ' page');
       onEnd();
       return;
     }
@@ -33,7 +33,7 @@ const parsePage = (link, pageN, onLinksExists, onError, onEnd) => {
       if (settings.linksParseLimit) {
         let linksParseLimit = parseInt(settings.linksParseLimit);
         if (i === linksParseLimit) {
-          console.log('Parsing complete on limit ' + linksParseLimit);
+          log.info('Parsing complete on limit ' + linksParseLimit);
           onLinksExists(links, pageN, () => {
             onEnd();
           });
@@ -42,7 +42,7 @@ const parsePage = (link, pageN, onLinksExists, onError, onEnd) => {
       }
       links.push(linkElements[i].attribs.href);
     }
-    console.log('Parsed ' + pageN + ' page. Links count: ' + links.length);
+    log.info('Parsed ' + pageN + ' page. Links count: ' + links.length);
     onLinksExists(links, pageN, () => {
       setTimeout(() => {
         parsePage(link, pageN + 1, onLinksExists, onError, onEnd);
@@ -51,9 +51,8 @@ const parsePage = (link, pageN, onLinksExists, onError, onEnd) => {
   });
 };
 
-
 if (!process.argv[2]) {
-  console.log('Syntax: node parseLinks.js avito/items/link');
+  log.warn('Syntax: node parseLinks.js {sourceHash}');
 }
 
 const buildItems = (links) => {
@@ -74,19 +73,22 @@ require('./lib/db')(function (models) {
     if (!source) {
       throw new Error(`Source ${hash} not found`);
     }
+    const parseProcess = require('./lib/parseLinks/process')(hash);
+    parseProcess.init();
+
     models.item.find({sourceHash: hash}).remove().exec((err, r) => {
       let linksPage = source.lastLinksPage === 0 ? 1 : source.lastLinksPage + 1;
       const onLinksExists = (links, pageN, callback) => {
         models.source.updateOne({hash}, {$set: {lastLinksPage: pageN}}).exec(() => {
           saveMany(models.item, buildItems(links), () => {
-            console.log(`Links saved for ${hash} source (page: ${pageN})`);
+            log.info(`Links saved for ${hash} source (page: ${pageN})`);
             wsConnection.emit('changed', 'source');
             callback();
           });
         });
       };
       const onError = (error) => {
-        console.error(error);
+        log.warn(error);
         process.exit(1);
       };
       const onEnd = () => {
@@ -94,8 +96,9 @@ require('./lib/db')(function (models) {
           updating: false,
           lastLinksPage: 0
         }}).exec(() => {
+          parseProcess.stop();
           wsConnection.emit('changed', 'source');
-          console.log(`Successfully ended on page ${linksPage}`);
+          log.info(`Successfully ended on page ${linksPage}`);
           process.exit(0);
         });
       };
@@ -110,8 +113,3 @@ require('./lib/db')(function (models) {
     });
   });
 });
-//
-//
-// // const parseNext = () => {
-// //     pageN++;
-// // };

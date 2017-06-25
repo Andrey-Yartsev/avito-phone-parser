@@ -26,14 +26,31 @@ const menu = `
   <link href="/i/pagination.css" rel="stylesheet">
   <link href="/i/upload.css" rel="stylesheet">
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.1/socket.io.slim.js"></script>
+  <script    src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.1/socket.io.slim.js"></script>
   <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+  
+  <script src="/i/jquery.floatingmessage.js"></script>
 </head>
 <body>
 
 <script>
 	var socket = io.connect('http://${host}:3050');
+</script>
+
+<pre id="errors" style="display:none">
+  <a href="/delete-error-log" class="btn btn-danger">Очистить</a>
+  <div class="cont"></div>
+</pre>
+<script>
+  $.ajax({
+    url: '/get-error-log',
+    success: function(result) {
+      if (!result) return;
+      $("#errors .cont").html(result);
+      $("#errors").css('display', 'block');
+    }
+  });
 </script>
 
 <nav class="navbar navbar-default" role="navigation">
@@ -307,11 +324,13 @@ const renderSources = (request, reply) => {
     }
 
     request.models.source.find().exec((err, r) => {
+      const parseProcess = require('../parseLinks/process');
       let html = `
 <script>
 socket.on('changed', function (what) {
   if (what !== 'source') return;
-  $('#sources').load(window.location.pathname + ' #sources ul', function() {});		
+  console.log('source changed');
+  $('#sources').load(window.location.pathname + ' #sources ul', function() {});
 });
 </script>
 
@@ -319,14 +338,15 @@ socket.on('changed', function (what) {
 <ul>`;
       for (let v of r) {
         let count = counts[v.hash] || 0;
+        let updating = parseProcess(v.hash).inProgress();
         let links = count ?
           `<a href="/items/${v.hash}" class="btn btn-default"><b>Ссылки</b> (${count})</a> ` +
           `<a href="/items-with-phone/${v.hash}" class="btn btn-default">Ссылки с телефоном</a>` : '';
-        let updating = v.updating ?
-          `<span class="btn btn-primary">Обновляются</span>` :
-          `<a href="/parse-source/${v.hash}" class="btn btn-warning">Обновить ссылки</a>`;
+        updating = updating ?
+          `<a href="/stop-links-parsing/${v.hash}" class="btn btn-primary">Обновляются. Остановить</a>` :
+          `<a href="/start-links-parsing/${v.hash}" class="btn btn-warning">Обновить ссылки</a>`;
         html += `<li>
-<h3><a href="/items/${v.hash}"><b>${v.title}</b></a> <span class="label label-default">${v.hash}</span></h3>
+<h3><a href="/items/${v.hash}"><b>${v.title}</b></a></h3>
 <p>
   ${updating}
    
@@ -379,7 +399,7 @@ const renderItems = function (request, reply, sourceHash, filter, prependHtml, c
       skip(pagination.options.n * (paginationData.page - 1)).//
       limit(pagination.options.n).//
       exec(function (err, r) {
-        reply(menu + prependHtml + 
+        reply(menu + prependHtml +
           '<div class="pagination"><span class="total">Всего: ' + totalRecordsCount + '</span>' + paginationData.pNums + '</div>'
           + table(r, true));
       });
@@ -616,11 +636,16 @@ module.exports = [{
   }
 }, {
   method: 'GET',
-  path: '/parse-source/{hash}',
+  path: '/start-links-parsing/{sourceHash}',
   handler: function (request, reply) {
-    spawn('node', ['parseLinks.js', request.params.hash], {
-      detached: true
-    });
+    require('../parseLinks/process')(request.params.sourceHash).start();
+    reply.redirect('/sources');
+  }
+}, {
+  method: 'GET',
+  path: '/stop-links-parsing/{sourceHash}',
+  handler: function (request, reply) {
+    require('../parseLinks/process')(request.params.sourceHash).stop();
     reply.redirect('/sources');
   }
 }, {
@@ -692,56 +717,14 @@ module.exports = [{
       allow: 'multipart/form-data',
       maxBytes: 500000000
     },
-    handler: (request, reply) => {
-      const data = request.payload;
-      if (data.file) {
-        const name = request.params.hash + '.wav';
-        const wavFile = soundsFolder + '/' + name;
-        const pm3File = soundsFolder + '/' + request.params.hash + '.mp3';
-        if (fs.existsSync(wavFile)) {
-          fs.unlinkSync(wavFile);
-        }
-        const file = fs.createWriteStream(wavFile);
-        file.on('error', function (err) {
-          console.error(err);
-          reply(err);
-        });
-        data.file.pipe(file);
-        data.file.on('end', function (err) {
-          const ret = {
-            status: 'success',
-            filename: data.file.hapi.filename,
-            headers: data.file.hapi.headers
-          };
-          const gsmFile = soundsAsterFolder + '/' + request.params.hash + '.gsm';
-          exec(`sox -V ${wavFile} -r 8000 -c 1 -t gsm ${gsmFile}`, function (err, err2, output) {
-            if (err) {
-              console.error(err);
-              reply({error: err.code});
-              return;
-            }
-            console.log('gsm converted');
-            exec(`lame -b 32 --resample 8 -a ${wavFile} ${pm3File}`,
-              function (err, err2, output) {
-                if (err) {
-                  console.error(err);
-                  reply({error: err.code});
-                  return;
-                }
-                console.log('mp3 converted');
-                reply(ret);
-              });
-          });
-        });
-      }
-    }
+    handler: require('../sound/upload').handler
   }
 }, {
   method: 'GET',
   path: '/start-calling/{sourceHash}',
   handler: function (request, reply) {
     const callProcess = require('../call/process')(request.params.sourceHash);
-    callProcess.start();
+    callProcess.start(wsConnection);
     setTimeout(() => {
       reply.redirect('/items/' + request.params.sourceHash + '/calling');
     }, 1000);
@@ -763,5 +746,19 @@ module.exports = [{
       index: true
     }
   }
-}];
+}, {
+  method: 'GET',
+  path: '/get-error-log',
+  handler: (request, reply) => {
+    reply(fs.readFileSync('data/log/error.log'));
+  }
+}, {
+  method: 'GET',
+  path: '/delete-error-log',
+  handler: (request, reply) => {
+    fs.writeFileSync('data/log/error.log', '');
+    reply.redirect('/');
+  }
+}
+];
 
