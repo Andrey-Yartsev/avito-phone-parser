@@ -46,7 +46,7 @@ const parsePage = (link, pageN, onLinksExists, onError, onEnd) => {
     onLinksExists(links, pageN, () => {
       setTimeout(() => {
         parsePage(link, pageN + 1, onLinksExists, onError, onEnd);
-      }, Math.round(Math.random() * 10000) + 2000);
+      }, Math.round(Math.random() * 5000) + 2000);
     });
   });
 };
