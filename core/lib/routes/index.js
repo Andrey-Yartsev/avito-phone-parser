@@ -3,16 +3,12 @@ const fs = require('fs');
 
 const exec = require('child_process').exec;
 const spawn = require('child_process').spawn;
-const hashCode = require('../../lib/hashCode');
 const dateFormat = require('dateformat');
 
 const Path = require('path');
 const staticFolder = Path.join(__dirname, '../../static');
-const soundsFolder = Path.join(staticFolder, '/sound');
-const soundsAsterFolder = Path.join(__dirname, '../../../asterisk/sound');
-
+const sound = require('../sound');
 const call = require('../call/call');
-
 const wsClient = require("socket.io-client");
 const wsConnection = wsClient.connect("http://localhost:3050/");
 
@@ -103,10 +99,6 @@ const renderLayout = (reply, body) => {
   reply(menu + body + footer);
 };
 
-const soundExists = (sourceHash) => {
-  return fs.existsSync(soundsAsterFolder + '/' + sourceHash + '.gsm');
-};
-
 const itemsMenu = (sourceHash) => {
   const parseInProgress = require('../parse/process')(sourceHash).inProgress();
   const callInProgress = require('../call/process')(sourceHash).inProgress();
@@ -121,7 +113,7 @@ const itemsMenu = (sourceHash) => {
   }
 
   let soundBtns = ``;
-  if (soundExists(sourceHash)) {
+  if (sound(sourceHash)) {
     soundBtns = `<a href="/source-sound/${sourceHash}" class="btn btn-default">Прослушать звук</a>`;
     if (callInProgress) {
       soundBtns +=
@@ -682,17 +674,16 @@ module.exports = [{
   method: 'GET',
   path: '/source-sound/{hash}',
   handler: (request, reply) => {
-    let fileName = request.params.hash + '.mp3';
-    if (!fs.existsSync(soundsFolder + '/' + fileName)) {
-      reply('file "' + soundsFolder + '/' + fileName + '" does not exists');
+    let snd = sound(request.params.hash);
+    if (!snd.existsMp3()) {
+      reply('mp3 for "' + request.params.hash + '" does not exists');
       return;
     }
-    let stat = fs.statSync(soundsFolder + '/' + fileName);
     let html = `
 <div class="page-header"><h2>Прослушать звук</h2></div>
 <div class="media">
 <audio controls preload="metadata" style="width:300px;">
-  <source src="/i/sound/${fileName}?${stat.mtime}" type="audio/mpeg">
+  <source src="${snd.mp3Path()}" type="audio/mpeg">
 </audio>
 </div>
 `;
