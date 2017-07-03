@@ -1,5 +1,6 @@
+const log = require('./lib/log');
 if (!process.argv[2]) {
-  console.log('Syntax: node caller.js {sourceHash}');
+  log.error('Syntax: node caller.js {sourceHash}');
   return;
 }
 const sourceHash = process.argv[2];
@@ -11,7 +12,7 @@ if (process.argv[3] === 'reset') {
     }, {
       lastCallDt: null
     }, (err, r) => {
-      console.log(r);
+      log.info(r);
       process.exit(1);
     });
   });
@@ -19,9 +20,7 @@ if (process.argv[3] === 'reset') {
   const wsClient = require("socket.io-client");
   const wsConnection = wsClient.connect("http://localhost:3050/");
   const AddCall = require('./lib/call/add');
-
   const callProcess = require('./lib/call/process')(sourceHash);
-
   require('./lib/db')(function (models) {
     const addCall = AddCall(models, wsConnection, sourceHash);
     callProcess.init();

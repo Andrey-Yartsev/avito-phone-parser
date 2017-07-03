@@ -207,4 +207,4 @@ Create file `.env` with such contents:
 
     cd /usr/src/collector/core
     pm2 start server.js
-   
+

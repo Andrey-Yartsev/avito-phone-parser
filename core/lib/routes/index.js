@@ -507,8 +507,7 @@ module.exports = [{
   method: 'GET',
   path: '/start-item-parsing/{sourceHash}',
   handler: function (request, reply) {
-    const parseProcess = require('../parse/process')(request.params.sourceHash);
-    parseProcess.start();
+    require('../parse/process')(request.params.sourceHash).start();
     setTimeout(() => {
       reply.redirect('/items/' + request.params.sourceHash);
     }, 1000);
@@ -714,8 +713,8 @@ module.exports = [{
   method: 'GET',
   path: '/start-calling/{sourceHash}',
   handler: function (request, reply) {
-    const callProcess = require('../call/process')(request.params.sourceHash);
-    callProcess.start(wsConnection);
+    require('../call/process')(request.params.sourceHash).start(wsConnection);
+    require('../call/recallProcess')(request.params.sourceHash).start();
     setTimeout(() => {
       reply.redirect('/items/' + request.params.sourceHash + '/calling');
     }, 1000);
@@ -725,7 +724,10 @@ module.exports = [{
   path: '/stop-calling/{sourceHash}',
   handler: function (request, reply) {
     require('../call/process')(request.params.sourceHash).stop();
-    reply.redirect('/items/' + request.params.sourceHash + '/calling');
+    require('../call/recallProcess')(request.params.sourceHash).stop();
+    setTimeout(() => {
+      reply.redirect('/items/' + request.params.sourceHash + '/calling');
+    }, 1000);
   }
 }, {
   method: 'GET',

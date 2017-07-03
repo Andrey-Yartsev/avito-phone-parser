@@ -21,12 +21,6 @@ module.exports = (sourceHash) => {
           });
         }
       });
-      // child.stderr.on('data', function (data) {
-      //   console.log('stderr: ' + data);
-      // });
-      // child.on('close', function (code) {
-      //   console.log('child process exited with code ' + code);
-      // });
     },
     stop: () => {
       const pid = fs.readFileSync(dataFolder + '/' + sourceHash);
