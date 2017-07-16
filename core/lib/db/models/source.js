@@ -17,6 +17,10 @@ module.exports = mongoose.model('Source', mongoose.Schema({
     type: Boolean,
     default: false
   },
+  callingComplete: {
+    type: Boolean,
+    default: false
+  },
   lastLinksPage: {
     type: Number,
     default: 0

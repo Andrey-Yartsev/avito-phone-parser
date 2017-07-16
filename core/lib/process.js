@@ -9,10 +9,14 @@ module.exports = (dataFolder, script, sourceHash) => {
   };
   return {
     init: () => {
-      log.info(`write ${process.pid} to ${dataFolder}/${sourceHash}`);
       fs.writeFileSync(dataFolder + '/' + sourceHash, process.pid);
     },
     start: () => {
+      log.info('starting ' + script);
+      const exists = fs.existsSync(dataFolder + '/' + sourceHash);
+      if (exists) {
+        throw new Error('Can not start unstopped process');
+      }
       const child = spawn('node', [script, sourceHash], {
         detached: true
       });

@@ -21,12 +21,27 @@ if (process.argv[3] === 'reset') {
   const wsConnection = wsClient.connect("http://localhost:3050/");
   const AddCall = require('./lib/call/add');
   const callProcess = require('./lib/call/process')(sourceHash);
-  require('./lib/db')(function (models) {
+
+  require('./lib/db')(async function (models) {
     const addCall = AddCall(models, wsConnection, sourceHash);
     callProcess.init();
-    addCall();
-    setInterval(addCall, 60000);
+    setTimeout(() => {
+      wsConnection.emit('changed', 'source');
+    }, 500);
+
+    addCall().then(async (callAdded) => {
+      log.info('addCall');
+      if (!callAdded) {
+        log.info('nothing to call 2');
+        wsConnection.emit('changed', 'source');
+        wsConnection.emit('changed', {
+          type: 'notice',
+          message: 'Завершаю обзвон ' + sourceHash
+        });
+        log.info(`finish calling on ${sourceHash}`);
+        await models.source.update({hash: sourceHash}, {$set: {callingComplete: true}});
+      }
+      setInterval(addCall, 5000);
+    });
   });
 }
-
-

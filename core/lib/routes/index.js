@@ -12,134 +12,14 @@ const call = require('../call/call');
 const wsClient = require("socket.io-client");
 const wsConnection = wsClient.connect("http://localhost:3050/");
 
-const host = process.env.SERVER_HOST || 'localhost';
-const menu = `
-<html>
-<head>
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-
-  <link href="/i/layout.css" rel="stylesheet">
-  <link href="/i/pagination.css" rel="stylesheet">
-  <link href="/i/upload.css" rel="stylesheet">
-
-  <script    src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.1/socket.io.slim.js"></script>
-  <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-  
-  <script src="/i/jquery.floatingmessage.js"></script>
-</head>
-<body>
-
-<script>
-	var socket = io.connect('http://${host}:3050');
-</script>
-
-<pre id="errors" style="display:none">
-  <a href="/delete-error-log" class="btn btn-danger">Очистить</a>
-  <div class="cont"></div>
-</pre>
-<script>
-  $.ajax({
-    url: '/get-error-log',
-    success: function(result) {
-      if (!result) return;
-      $("#errors .cont").html(result);
-      $("#errors").css('display', 'block');
-    }
-  });
-</script>
-
-<nav class="navbar navbar-default" role="navigation">
-  <div class="container-fluid">
-    <!-- Brand and toggle get grouped for better mobile display -->
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-      <a class="navbar-brand" href="/">Avito Parse'n'Call</a>
-    </div>
-    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-      <ul class="nav navbar-nav">
-        <li class="dropdown">
-          <a href="№" class="dropdown-toggle" data-toggle="dropdown">Выдачи <b class="caret"></b></a>
-          <ul class="dropdown-menu">
-          
-            <li><a href="/sources">Посмотреть</a></li>
-            <li><a href="/add-source">Добавить выдачу</a></li>
-          </ul>
-        </li> 
-        <li><a href="/settings">Настройки</a><li>
-        <!--
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <b class="caret"></b></a>
-          <ul class="dropdown-menu">
-            <li><a href="#">Действие</a></li>
-            <li><a href="#">Другое действие</a></li>
-            <li><a href="#">Что-то еще</a></li>
-            <li class="divider"></li>
-            <li><a href="#">Отдельная ссылка</a></li>
-            <li class="divider"></li>
-            <li><a href="#">Еще одна отдельная ссылка</a></li>
-          </ul>
-        </li>
-        -->
-      </ul>
-    </div>
-  </div>
-</nav>
-<div class="body">
-`;
-
-const footer = `</div></body></html>`;
+const header = require('../views/header');
+const layout = require('../views/layout');
 
 const renderLayout = (reply, body) => {
-  reply(menu + body + footer);
+  reply(layout(body));
 };
 
-const itemsMenu = (sourceHash) => {
-  const parseInProgress = require('../parse/process')(sourceHash).inProgress();
-  const callInProgress = require('../call/process')(sourceHash).inProgress();
-  let parseBtn;
-  if (parseInProgress) {
-    parseBtn =
-      `<a href="/stop-item-parsing/${sourceHash}" class="btn btn-default btn-primary">Стоп (парс.тел.)</a>` +
-      `<a href="/items/${sourceHash}/parsing" class="btn btn-default">Парсятся</a>`;
-  } else {
-    parseBtn =
-      `<a href="/start-item-parsing/${sourceHash}" class="btn btn-default"></span>Старт (парс.тел.)</a> `;
-  }
-
-  let soundBtns = ``;
-  if (sound(sourceHash)) {
-    soundBtns = `<a href="/source-sound/${sourceHash}" class="btn btn-default">Прослушать звук</a>`;
-    if (callInProgress) {
-      soundBtns +=
-        `<a href="/stop-calling/${sourceHash}" class="btn btn-default btn-primary">Стоп (обзвон)</a>` +
-        ``;
-    } else {
-      soundBtns +=
-        `<a href="/start-calling/${sourceHash}" class="btn btn-default">Старт (обзвон)</a>`;
-    }
-  }
-
-  return `
-<div class="btn-group">
-  <a href="/items/${sourceHash}" class="btn btn-default">Все</a>
-  ${parseBtn}
-  <a href="/items/${sourceHash}/with-phone" class="btn btn-default">С телефоном</a>
-</div>
-<div class="btn-group">
-  <a href="/source-upload-sound/${sourceHash}" class="btn btn-default">Загрузить звук</a>
-  ${soundBtns}
-  <a href="/items/${sourceHash}/called" class="btn btn-default">Завершенные звонки</a>
-  <a href="/items/${sourceHash}/calling" class="btn btn-default">Звонки в процессе</a>
-  <a href="/test-items/${sourceHash}" class="btn btn-default">Тестовые телефоны</a>
-  <a href="/create-test-item/${sourceHash}" class="btn btn-default">Добавить тестовый телефон</a>
-</div>`;
-};
+const itemsMenu = require('../views/itemsMenu');
 
 const table = function (r, call) {
   let html = ``;
@@ -150,7 +30,6 @@ const table = function (r, call) {
 <script>
 socket.on('changed', function (what) {
   if (what !== 'item') return;
-  console.log('changed item');
   $('#table').load(window.location.pathname + ' #table div', function() {});		
 });
 </script>
@@ -236,6 +115,7 @@ socket.on('changed', function (what) {
   return html;
 };
 
+
 const createForm = function (sourceHash) {
   return `
 <h2>Добавить телефон</h2>
@@ -271,40 +151,6 @@ const createSourceForm = function () {
 `;
 };
 
-const settingsForm = () => {
-  let settings = fs.readFileSync('data/settings.json');
-  settings = JSON.parse(settings);
-  if (!settings.clientSmsText) settings.clientSmsText = '';
-  if (!settings.managerSmsText) settings.managerSmsText = '';
-  if (!settings.managerPhone) settings.managerPhone = '';
-  if (!settings.linksParseLimit) settings.linksParseLimit = '';
-  return `
-<h2>Настройки</h2>
-
-<form method="POST" action="/settings">
-<p>
-  Текст СМС клиенту: *<br />
-  <textarea name="clientSmsText" style="width:400px;height:100px;">${settings.clientSmsText}</textarea>
-</p>
-<p>
-  Текст СМС менеджеру: *<br />
-  <textarea name="managerSmsText" style="width:400px;height:100px;">${settings.managerSmsText}</textarea>
-</p>
-<p>
-  Телефон менеджера: *<br />
-  <input name="managerPhone" value="${settings.managerPhone}" />
-</p>
-<p>
-  Лимит ссылок при парсинге источника: *<br />
-  <input name="linksParseLimit" value="${settings.linksParseLimit}" />
-</p>
-<p>
-  <input type="submit" value="Сохранить" class="btn btn-default" />
-</p>
-</form>
-`;
-
-};
 
 const renderSources = (request, reply) => {
   request.models.item.aggregate([
@@ -391,9 +237,9 @@ const renderItems = function (request, reply, sourceHash, filter, prependHtml, c
       skip(pagination.options.n * (paginationData.page - 1)).//
       limit(pagination.options.n).//
       exec(function (err, r) {
-        reply(menu + prependHtml +
+        reply(layout(prependHtml +
           '<div class="pagination"><span class="total">Всего: ' + totalRecordsCount + '</span>' + paginationData.pNums + '</div>'
-          + table(r, true));
+          + table(r, true)));
       });
     });
 
@@ -448,7 +294,7 @@ module.exports = [{
   method: 'GET',
   path: '/welcome',
   handler: function (request, reply) {
-    reply(menu + `<h2>Welcome to Avito Parse'n'Call</h2>`);
+    reply(layout(`<h2>Welcome to Avito Parse'n'Call</h2>`));
   }
 }, {
   method: 'GET',
@@ -536,7 +382,7 @@ module.exports = [{
   method: 'GET',
   path: '/create-test-item/{sourceHash}',
   handler: function (request, reply) {
-    reply(menu + itemsMenu(request.params.sourceHash) + createForm(request.params.sourceHash));
+    reply(layout(itemsMenu(request.params.sourceHash) + createForm(request.params.sourceHash)));
   }
 }, {
   method: 'GET',
@@ -584,7 +430,7 @@ module.exports = [{
   method: 'GET',
   path: '/add-source',
   handler: function (request, reply) {
-    reply(menu + createSourceForm());
+    reply(layout(createSourceForm()));
   }
 }, {
   method: 'POST',
@@ -642,16 +488,11 @@ module.exports = [{
 }, {
   method: 'GET',
   path: '/settings',
-  handler: function (request, reply) {
-    reply(menu + settingsForm(request, reply));
-  }
+  handler: require('../controllers/settings').form
 }, {
   method: 'POST',
   path: '/settings',
-  handler: function (request, reply) {
-    fs.writeFileSync('data/settings.json', JSON.stringify(request.payload));
-    reply.redirect('/settings');
-  }
+  handler: require('../controllers/settings').save
 }, {
   method: 'GET',
   path: '/call/{id}',
@@ -686,7 +527,7 @@ module.exports = [{
 </audio>
 </div>
 `;
-    reply(menu + itemsMenu(request.params.hash) + html);
+    reply(layout(itemsMenu(request.params.hash) + html));
   }
 }, {
   method: 'GET',
@@ -695,7 +536,7 @@ module.exports = [{
     let page = fs.readFileSync(staticFolder + '/upload.html');
     page = page.toString().replace(/{{uploadUrl}}/, '/source-upload-sound/' + request.params.hash);
     page = page.toString().replace(/{{redirectUrl}}/, '/source-sound/' + request.params.hash);
-    reply(menu + itemsMenu(request.params.hash) + page);
+    reply(layout(itemsMenu(request.params.hash) + page));
   }
 }, {
   method: 'POST',
@@ -713,8 +554,7 @@ module.exports = [{
   method: 'GET',
   path: '/start-calling/{sourceHash}',
   handler: function (request, reply) {
-    require('../call/process')(request.params.sourceHash).start(wsConnection);
-    require('../call/recallProcess')(request.params.sourceHash).start();
+    require('../call/start')(request.params.sourceHash, wsConnection);
     setTimeout(() => {
       reply.redirect('/items/' + request.params.sourceHash + '/calling');
     }, 1000);
@@ -723,8 +563,7 @@ module.exports = [{
   method: 'GET',
   path: '/stop-calling/{sourceHash}',
   handler: function (request, reply) {
-    require('../call/process')(request.params.sourceHash).stop();
-    require('../call/recallProcess')(request.params.sourceHash).stop();
+    require('../call/stop')(request.params.sourceHash, wsConnection);
     setTimeout(() => {
       reply.redirect('/items/' + request.params.sourceHash + '/calling');
     }, 1000);

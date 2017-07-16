@@ -1,5 +1,6 @@
 const spawn = require('child_process').spawn;
 const fs = require('fs');
+const log = require('../log');
 
 module.exports = (sourceHash) => {
   const script = 'caller.js';
@@ -9,6 +10,7 @@ module.exports = (sourceHash) => {
       fs.writeFileSync(dataFolder + '/' + sourceHash, process.pid);
     },
     start: (wsConnection) => {
+      log.info('starting ' + script);
       const child = spawn('node', [script, sourceHash], {
         detached: true
       });
@@ -21,8 +23,12 @@ module.exports = (sourceHash) => {
           });
         }
       });
+      child.on('close', function (code) {
+        log.info(`Process ${script} ${sourceHash} has stopped` + (code ? `with code ${code}` : ''));
+      });
     },
     stop: () => {
+      log.info('stopping ' + script);
       const pid = fs.readFileSync(dataFolder + '/' + sourceHash);
       fs.unlinkSync(dataFolder + '/' + sourceHash);
       spawn('kill', [pid], {

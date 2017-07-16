@@ -1,26 +1,69 @@
 .body {
-padding: 0 20px;
-position: relative;
+  padding: 0 20px;
+  position: relative;
 }
+
 .page-header {
-margin-top: 0;
-margin-bottom: 15px;
+  margin-top: 0;
+  margin-bottom: 15px;
 }
+
 h2 {
-font-size: 22px;
+  font-size: 22px;
 }
+
 form input[type=submit] {
-margin-top: 15px;
+  margin-top: 15px;
 }
+
 .panel {
-margin-top: 15px;
+  margin-top: 15px;
 }
+
 #errors {
-    z-index: 100;
-    position: absolute;
-    top: 0;
-    right: 0;
-    background: rgba(223, 62, 57, 0.7);
-    color: #fff;
-    max-width: 80%;
+  z-index: 100;
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: rgba(223, 62, 57, 0.7);
+  color: #fff;
+  max-width: 80%;
+}
+
+form.settings {
+  max-width: 700px;
+}
+form.settings label:after {
+  content: ':';
+}
+form.settings .fn-scheduleDays label:first-child {
+  display: block;
+}
+form.settings .fn-scheduleDays label {
+  font-weight: normal;
+  margin-right: 10px;
+}
+form.settings .fn-scheduleDays label:after {
+  content: '';
+}
+form.settings .fn-scheduleDays input {
+  margin-right: 5px;
+}
+form.settings .fn-scheduleTimeFrom,
+form.settings .fn-scheduleTimeTo {
+  width: 100px;
+  display: inline-block;
+  padding-right: 15px;
+}
+form.settings .fn-scheduleTimeFrom label,
+form.settings .fn-scheduleTimeTo label {
+  font-weight: normal;
+}
+.submit {
+  padding-top: 15px;
+}
+
+.alert {
+  max-width: 200px;
+  right: 0;
 }
