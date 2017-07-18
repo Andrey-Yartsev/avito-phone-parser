@@ -1,7 +1,6 @@
 const call = require('./call');
 const log = require('../log');
-const scheduleMatch = ('./lib/call/schedule/match');
-
+const scheduleMatch = require('./schedule/match');
 
 module.exports = function (models, wsConnection, sourceHash) {
   return async function () {
