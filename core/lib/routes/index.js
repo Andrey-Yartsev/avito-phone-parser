@@ -206,6 +206,10 @@ socket.on('changed', function (what) {
 };
 
 const renderItems = function (request, reply, sourceHash, filter, prependHtml, call) {
+
+
+
+
   if (!prependHtml) prependHtml = '';
   request.models.source.findOne({
     hash: request.params.sourceHash
@@ -222,8 +226,8 @@ const renderItems = function (request, reply, sourceHash, filter, prependHtml, c
       // ------------
       let Pagination = require('ngn-pagination');
       let pagination = new Pagination({
-        basePath: '/items/' + sourceHash,
-        maxPages: 20
+        basePath: request.url.path.replace(/(.*)\/pg\d+/, '$1'),
+        maxPages: 10
       });
 
       let currentPageN = 1; // first page
@@ -284,7 +288,23 @@ module.exports = [{
   }
 }, {
   method: 'GET',
+  path: '/items/{sourceHash}/called/pg{pn}',
+  handler: function (request, reply) {
+    renderItems(request, reply, request.params.sourceHash, {
+      lastCallDt: {$ne: null}
+    });
+  }
+}, {
+  method: 'GET',
   path: '/items/{sourceHash}/calling',
+  handler: function (request, reply) {
+    renderItems(request, reply, request.params.sourceHash, {
+      callStatus: 'calling'
+    });
+  }
+}, {
+  method: 'GET',
+  path: '/items/{sourceHash}/calling/pg{pn}',
   handler: function (request, reply) {
     renderItems(request, reply, request.params.sourceHash, {
       callStatus: 'calling'
