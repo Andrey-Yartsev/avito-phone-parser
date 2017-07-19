@@ -11,6 +11,7 @@ const sound = require('../sound');
 const call = require('../call/call');
 const wsClient = require("socket.io-client");
 const wsConnection = wsClient.connect("http://localhost:3050/");
+const hashCode = require('../hashCode');
 
 const header = require('../views/header');
 const layout = require('../views/layout');

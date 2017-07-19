@@ -28,9 +28,9 @@ if (process.argv[3] === 'reset') {
     setTimeout(() => {
       wsConnection.emit('changed', 'source');
     }, 500);
-
+    log.info('adding call');
     addCall().then(async (callAdded) => {
-      log.info('addCall');
+      log.info('add call result: ' + (callAdded ? 'added' : 'schedule not match'));
       if (!callAdded) {
         log.info('nothing to call 2');
         wsConnection.emit('changed', 'source');
@@ -41,7 +41,9 @@ if (process.argv[3] === 'reset') {
         log.info(`finish calling on ${sourceHash}`);
         await models.source.update({hash: sourceHash}, {$set: {callingComplete: true}});
       }
-      setInterval(addCall, 5000);
+      setInterval(addCall, 60000);
+    }).catch((e) => {
+      log.error(e);
     });
   });
 }
