@@ -38,6 +38,7 @@ module.exports = (sourceHash) => {
   ${soundBtns}
   <a href="/items/${sourceHash}/called" class="btn btn-default">Завершенные звонки</a>
   <a href="/items/${sourceHash}/calling" class="btn btn-default">Звонки в процессе</a>
+  <a href="/items/${sourceHash}/accepted" class="btn btn-default">Подтверждённые</a>
   <a href="/test-items/${sourceHash}" class="btn btn-default">Тестовые телефоны</a>
   <a href="/create-test-item/${sourceHash}" class="btn btn-default">Добавить тестовый телефон</a>
 </div>

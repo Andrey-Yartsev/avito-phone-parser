@@ -207,10 +207,6 @@ socket.on('changed', function (what) {
 };
 
 const renderItems = function (request, reply, sourceHash, filter, prependHtml, call) {
-
-
-
-
   if (!prependHtml) prependHtml = '';
   request.models.source.findOne({
     hash: request.params.sourceHash
@@ -251,67 +247,7 @@ const renderItems = function (request, reply, sourceHash, filter, prependHtml, c
   });
 };
 
-module.exports = [{
-  method: 'GET',
-  path: '/items/{sourceHash}',
-  handler: function (request, reply) {
-    renderItems(request, reply, request.params.sourceHash, {
-      sourceHash: request.params.sourceHash
-    });
-  }
-}, {
-  method: 'GET',
-  path: '/items/{sourceHash}/pg{pn}',
-  handler: function (request, reply) {
-    renderItems(request, reply, request.params.sourceHash, {
-      sourceHash: request.params.sourceHash
-    });
-  }
-}, {
-  method: 'GET',
-  path: '/items/{sourceHash}/with-phone',
-  handler: function (request, reply) {
-    request.models.source.findOne({
-      hash: request.params.sourceHash
-    }).exec(function (err, source) {
-      renderItems(request, reply, request.params.sourceHash, {
-        phone: {$ne: null}
-      });
-    });
-  }
-}, {
-  method: 'GET',
-  path: '/items/{sourceHash}/called',
-  handler: function (request, reply) {
-    renderItems(request, reply, request.params.sourceHash, {
-      lastCallDt: {$ne: null}
-    });
-  }
-}, {
-  method: 'GET',
-  path: '/items/{sourceHash}/called/pg{pn}',
-  handler: function (request, reply) {
-    renderItems(request, reply, request.params.sourceHash, {
-      lastCallDt: {$ne: null}
-    });
-  }
-}, {
-  method: 'GET',
-  path: '/items/{sourceHash}/calling',
-  handler: function (request, reply) {
-    renderItems(request, reply, request.params.sourceHash, {
-      callStatus: 'calling'
-    });
-  }
-}, {
-  method: 'GET',
-  path: '/items/{sourceHash}/calling/pg{pn}',
-  handler: function (request, reply) {
-    renderItems(request, reply, request.params.sourceHash, {
-      callStatus: 'calling'
-    });
-  }
-}, {
+const routes = [{
   method: 'GET',
   path: '/welcome',
   handler: function (request, reply) {
@@ -612,6 +548,55 @@ module.exports = [{
     fs.writeFileSync('data/log/error.log', '');
     reply.redirect('/');
   }
-}
+}];
+
+const controllers = {
+  items: function (request, reply) {
+    renderItems(request, reply, request.params.sourceHash, {
+      sourceHash: request.params.sourceHash
+    });
+  },
+  itemsWithPhone: function (request, reply) {
+    renderItems(request, reply, request.params.sourceHash, {
+      phone: {$ne: null}
+    });
+  },
+  itemsCalled: function (request, reply) {
+    renderItems(request, reply, request.params.sourceHash, {
+      lastCallDt: {$ne: null}
+    });
+  },
+  itemsCalling: function (request, reply) {
+    renderItems(request, reply, request.params.sourceHash, {
+      callStatus: 'calling'
+    });
+  },
+  itemsAccepted: function (request, reply) {
+    renderItems(request, reply, request.params.sourceHash, {
+      accepted: 1
+    });
+  },
+};
+
+const pathToHandler = [
+  ['/items/{sourceHash}', controllers.items],
+  ['/items/{sourceHash}/with-phone', controllers.itemsWithPhone],
+  ['/items/{sourceHash}/called', controllers.itemsCalled],
+  ['/items/{sourceHash}/calling', controllers.itemsCalling],
+  ['/items/{sourceHash}/accepted', controllers.itemsAccepted]
 ];
 
+for (let v of pathToHandler) {
+  routes.push({
+    method: 'GET',
+    path: v[0],
+    handler: v[1]
+  });
+  routes.push({
+    method: 'GET',
+    path: v[0] + '/pg{pn}',
+    handler: v[1]
+  });
+}
+
+module.exports = routes;
