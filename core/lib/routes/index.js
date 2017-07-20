@@ -550,53 +550,58 @@ const routes = [{
   }
 }];
 
-const controllers = {
-  items: function (request, reply) {
-    renderItems(request, reply, request.params.sourceHash, {
-      sourceHash: request.params.sourceHash
-    });
-  },
-  itemsWithPhone: function (request, reply) {
-    renderItems(request, reply, request.params.sourceHash, {
-      phone: {$ne: null}
-    });
-  },
-  itemsCalled: function (request, reply) {
-    renderItems(request, reply, request.params.sourceHash, {
-      lastCallDt: {$ne: null}
-    });
-  },
-  itemsCalling: function (request, reply) {
-    renderItems(request, reply, request.params.sourceHash, {
-      callStatus: 'calling'
-    });
-  },
-  itemsAccepted: function (request, reply) {
-    renderItems(request, reply, request.params.sourceHash, {
-      accepted: 1
-    });
-  },
+
+const filters = {
+  items: {},
+  itemsWithPhone: {phone: {$ne: null}},
+  itemsCalled: {lastCallDt: {$ne: null}},
+  itemsCalling: {callStatus: 'calling'},
+  itemsAccepted: {accepted: 1}
 };
 
-const pathToHandler = [
-  ['/items/{sourceHash}', controllers.items],
-  ['/items/{sourceHash}/with-phone', controllers.itemsWithPhone],
-  ['/items/{sourceHash}/called', controllers.itemsCalled],
-  ['/items/{sourceHash}/calling', controllers.itemsCalling],
-  ['/items/{sourceHash}/accepted', controllers.itemsAccepted]
-];
+const pathToHandler = {
+  'items': '/items/{sourceHash}',
+  'itemsWithPhone': '/items/{sourceHash}/with-phone',
+  'itemsCalled': '/items/{sourceHash}/called',
+  'itemsCalling': '/items/{sourceHash}/calling',
+  'itemsAccepted': '/items/{sourceHash}/accepted'
+};
 
-for (let v of pathToHandler) {
+for (let name in pathToHandler) {
+  let path = pathToHandler[name];
+  let handler = function (request, reply) {
+    renderItems(request, reply, request.params.sourceHash, filters[name]);
+  };
+  let excelHandler = function (request, reply) {
+
+  };
   routes.push({
     method: 'GET',
-    path: v[0],
-    handler: v[1]
+    path,
+    handler
   });
   routes.push({
     method: 'GET',
-    path: v[0] + '/pg{pn}',
-    handler: v[1]
+    path: path + '/pg{pn}',
+    handler
   });
 }
+
+// const itemsExcel = require('../views/items/excel');
+//
+// routes.push({
+//   method: 'GET',
+//   path: '/asd',
+//   handler: async (request, reply) => {
+//     const result = itemsExcel(request.models, {
+//       sourceHash: 'id1033740659'
+//     });
+//     reply(result)
+//
+//      .type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+//        .header('Content-Disposition', 'attachment; filename="result.xlsx"')
+//        .header('Content-Length', result.length);
+//   }
+// });
 
 module.exports = routes;
